@@ -64,7 +64,8 @@
         "Each synth type has appropriate tonal character (oscillator type, envelope, modulation settings)"
       ],
       "priority": 4,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-005",
