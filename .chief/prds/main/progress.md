@@ -27,6 +27,7 @@
 - Animation loops: use `drawRef` pattern (store callback in ref) to avoid self-referencing `useCallback` lint errors
 - GitHub integration modules go in `src/lib/github/` (languages.ts, client.ts, commits.ts, etc.)
 - Language names must exactly match keys in `LANGUAGE_SYNTH_MAP` from `src/lib/music/synths.ts`
+- Commit caching: API routes should call `getCachedCommits()` from `src/lib/github/cache.ts` — it checks SQLite first, fetches from GitHub on miss/stale
 
 ---
 
@@ -320,4 +321,25 @@
   - Check run conclusions include: success, failure, neutral, cancelled, skipped, timed_out, action_required, stale
   - When mocking a module that another module imports, use `vi.mock("./ci-status")` at the module level and `vi.mocked()` to type the mock
   - Failure should be checked before pending — if any check failed, the overall status is "fail" regardless of other running checks
+---
+
+## 2026-02-22 - US-020
+- Implemented commit caching layer in `src/lib/github/cache.ts`
+  - `isCacheStale(lastFetchedAt, queryTo?)` — determines cache freshness based on staleness rules
+  - `getCachedCommits(octokit, options)` — checks SQLite cache first, falls back to GitHub fetch
+  - Cache freshness rules: 5-minute TTL for recent data (within 24h), permanent cache for historical data (older than 24h)
+  - On cache miss: fetches all pages from GitHub, stores commits in SQLite, updates `last_fetched_at` on repo
+  - On cache hit: reads directly from SQLite with pagination and date range filtering
+  - Ensures repo exists in DB (creates if needed) before storing commits
+  - Returns `{ commits, total, page, hasMore, fromCache }` result
+- 18 unit tests in `cache.test.ts` covering:
+  - `isCacheStale`: null fetch time, fresh/stale recent data, historical data permanence, boundary conditions (exactly 5 min)
+  - `getCachedCommits`: cache hit, cache miss, stale cache, historical query bypass, multi-page GitHub fetch, date range passthrough, empty results, hasMore computation, page/limit passthrough
+- Files changed: `src/lib/github/cache.ts`, `src/lib/github/cache.test.ts`
+- **Learnings for future iterations:**
+  - The caching layer sits between the API route (US-022) and the GitHub fetch module — API routes should call `getCachedCommits` instead of `fetchCommits` directly
+  - `getRepoByFullName` returns `undefined` (not `null`) when repo not found — check with `=== undefined` or truthiness
+  - For mocking both DB and GitHub modules, use `vi.mock("../db/commits")` and `vi.mock("./commits")` separately — each gets its own mock factory
+  - `last_fetched_at` is stored as ISO 8601 string on the repos table — already existed in schema from US-015
+  - When fetching from GitHub on cache miss, all pages are fetched (not just the requested page) to fully populate the cache
 ---

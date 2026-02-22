@@ -328,7 +328,8 @@
         "last_fetched_at tracked per repo for staleness checks"
       ],
       "priority": 20,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-021",
