@@ -230,7 +230,8 @@
         "Current commit info displayed during playback (author, message, language, note)"
       ],
       "priority": 14,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-015",

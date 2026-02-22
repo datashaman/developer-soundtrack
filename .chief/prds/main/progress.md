@@ -190,3 +190,25 @@
   - Mute toggle stores pre-mute volume in a `useRef` to restore on unmute
   - Component follows same prop-based pattern as `WaveformVisualizer` — decoupled from `useMusicEngine` for testability and reuse
 ---
+
+## 2026-02-22 - US-014
+- Created test page at `/` that plays through hardcoded sample commits with full audio engine integration
+- Created `src/lib/data/sample-commits.ts` with 12 hardcoded commits spanning:
+  - 7 languages: TypeScript, Python, JavaScript, Rust, Markdown, Shell, Go, Java, C++, CSS, Ruby
+  - 5 authors: alice, bob, carol, dave, eve
+  - CI statuses: pass, fail, pending, unknown
+  - Special commits: merge ("Merge pull request #42"), revert ("Revert ..."), first-of-day (March 11 commits), late-night (23:50)
+- Musical params computed dynamically via `commitToMusicalParams()` to stay consistent with mapping logic
+- Created `src/components/player/TestPlayer.tsx` client component integrating:
+  - `WaveformVisualizer` with language-based stroke color
+  - `TransportControls` with all functional controls (play, pause, stop, seek, tempo, volume)
+  - Now-playing card showing author, message, language, diff stats, CI status, and musical info
+  - Scrollable commit list with clickable items for seeking
+- Updated `src/app/page.tsx` to render the test page (replaced default Next.js scaffold)
+- Files changed: `src/app/page.tsx`, `src/components/player/TestPlayer.tsx`, `src/lib/data/sample-commits.ts`
+- **Learnings for future iterations:**
+  - Sample commits use `Omit<Commit, "musicalParams">` and compute params dynamically — keeps data in sync with any mapping logic changes
+  - The `TestPlayer` component manages play/resume/stop state via a `hasStartedRef` ref — first play calls `play()`, subsequent calls use `resume()`
+  - Language colors are duplicated between `WaveformVisualizer` and `TestPlayer` — may want to extract to a shared module
+  - `&minus;` HTML entity works in JSX for the minus sign in diff stats display
+---
