@@ -405,7 +405,8 @@
         "Typography: JetBrains Mono for code/data, Space Grotesk for headings"
       ],
       "priority": 25,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-026",

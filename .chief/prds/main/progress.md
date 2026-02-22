@@ -424,3 +424,26 @@
   - `URLSearchParams` encodes `/` as `%2F` and `:` as `%3A` — test assertions need encoded values
   - AbortController abort in useEffect cleanup prevents state updates on unmounted/stale renders
 ---
+
+## 2026-02-22 - US-025
+- Implemented unauthenticated landing page at `/` with server-side auth check
+- Created `src/components/landing/LandingPage.tsx` client component with:
+  - Hero section: title, description explaining the concept, GitHub icon + "Connect with GitHub" CTA button
+  - Embedded demo player using the existing `TestPlayer` component with hardcoded sample commits
+  - Dark theme aesthetic: near-black background (#0a0a0e), cyan/teal accent (#00ffc8)
+- Updated `src/app/layout.tsx`:
+  - Replaced Geist/Geist_Mono fonts with JetBrains Mono (code/data) and Space Grotesk (headings)
+  - Updated metadata title/description
+- Updated `src/app/globals.css`:
+  - Set `--font-sans` to Space Grotesk, `--font-mono` to JetBrains Mono
+  - Removed light/dark media query — always dark (#0a0a0e background)
+- Updated `src/app/page.tsx` to a server component that calls `auth()` and conditionally renders:
+  - Unauthenticated: `<LandingPage />` with hero + demo player
+  - Authenticated: existing TestPlayer (placeholder for US-026 dashboard)
+- Files changed: `src/app/page.tsx`, `src/app/layout.tsx`, `src/app/globals.css`, `src/components/landing/LandingPage.tsx`
+- **Learnings for future iterations:**
+  - `auth()` from NextAuth v5 can be called in server components to gate content by auth state
+  - Font variables use `--font-jetbrains-mono` and `--font-space-grotesk` — apply via `font-[family-name:var(--font-jetbrains-mono)]` in Tailwind classes or `font-mono`/`font-sans` via theme config
+  - The landing page is a client component (needs `signIn` from next-auth/react) but the page route is a server component — this hybrid pattern works because the client component is imported and rendered by the server component
+  - `LandingPage` reuses `TestPlayer` as the demo player — no duplication of sample commit data or player logic
+---
