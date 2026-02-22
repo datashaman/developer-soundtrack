@@ -266,7 +266,8 @@
         "Environment variables: GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, NEXTAUTH_URL, NEXTAUTH_SECRET"
       ],
       "priority": 16,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-017",

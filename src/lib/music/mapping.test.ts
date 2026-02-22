@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CIStatus, Commit } from "@/types";
+import type { Commit } from "@/types";
 import {
   commitToMusicalParams,
   mapCIStatusToScale,

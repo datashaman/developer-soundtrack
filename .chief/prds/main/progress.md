@@ -21,6 +21,10 @@
 - DB tests: use in-memory SQLite (`:memory:`) with `vi.mock("./index")` to inject test db
 - JSON columns (languages, musical_params, etc.) stored as TEXT, parsed with JSON.parse/JSON.stringify
 - `pnpm.onlyBuiltDependencies` in package.json for native addons (better-sqlite3)
+- Auth: NextAuth.js v5 beta — config in `src/lib/auth.ts`, route at `src/app/api/auth/[...nextauth]/route.ts`
+- Auth: `Providers` wrapper (`SessionProvider`) in `src/components/shared/Providers.tsx`, used in root layout
+- Auth: Type augmentation for session `accessToken` in `src/types/next-auth.d.ts`
+- Animation loops: use `drawRef` pattern (store callback in ref) to avoid self-referencing `useCallback` lint errors
 
 ---
 
@@ -236,4 +240,25 @@
   - SQLite `INSERT OR REPLACE` is useful for commit upserts (same SHA can be re-fetched with updated CI status)
   - Foreign keys need `PRAGMA foreign_keys = ON` each connection (SQLite default is OFF)
   - SQLite stores dates as TEXT — ISO 8601 strings sort correctly for range queries
+---
+
+## 2026-02-22 - US-016
+- Configured NextAuth.js v5 (beta.30) with GitHub OAuth provider
+- Auth config in `src/lib/auth.ts` with GitHub provider, `repo` and `read:org` scopes
+- JWT and session callbacks store GitHub access token in encrypted session
+- Route handler at `src/app/api/auth/[...nextauth]/route.ts` exports GET/POST handlers
+- Type augmentation in `src/types/next-auth.d.ts` extends Session and JWT with `accessToken`
+- `AuthButton` client component in `src/components/shared/AuthButton.tsx` shows sign in/out state
+- `Providers` wrapper component in `src/components/shared/Providers.tsx` with `SessionProvider`
+- Updated `src/app/layout.tsx` to wrap children with `Providers`
+- Fixed pre-existing lint errors: WaveformVisualizer self-referencing useCallback (used drawRef pattern), unused imports in mapping.ts/mapping.test.ts
+- Files changed: `package.json`, `pnpm-lock.yaml`, `src/lib/auth.ts`, `src/types/next-auth.d.ts`, `src/app/api/auth/[...nextauth]/route.ts`, `src/components/shared/AuthButton.tsx`, `src/components/shared/Providers.tsx`, `src/app/layout.tsx`, `src/components/player/WaveformVisualizer.tsx`, `src/lib/music/mapping.ts`, `src/lib/music/mapping.test.ts`
+- **Learnings for future iterations:**
+  - NextAuth.js v5 beta works with Next.js 16 — install via `pnpm add next-auth@beta`
+  - Auth config goes in `src/lib/auth.ts` (not root `auth.ts`) to match project's file structure
+  - Export `{ auth, handlers, signIn, signOut }` from NextAuth() — `handlers` is destructured to `{ GET, POST }` in route handler
+  - Use existing env var names from `.env.example` (GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, NEXTAUTH_SECRET) — pass explicitly to provider config
+  - Session augmentation requires `declare module "next-auth"` and `declare module "next-auth/jwt"` in a `.d.ts` file
+  - Client components using `useSession` need `SessionProvider` in a parent — use a `Providers` wrapper component in `src/components/shared/Providers.tsx`
+  - Self-referencing `useCallback` for animation loops triggers lint error — use `drawRef` pattern: store draw function in a ref, update ref in useEffect, self-reference via `drawRef.current`
 ---

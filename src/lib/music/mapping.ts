@@ -1,4 +1,4 @@
-import type { CIStatus, Commit, CommitStats, MusicalParams, ScaleType } from "@/types";
+import type { CIStatus, Commit, MusicalParams, ScaleType } from "@/types";
 import { getNoteName } from "./scales";
 import { getSynthConfig } from "./synths";
 

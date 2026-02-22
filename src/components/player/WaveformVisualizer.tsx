@@ -41,6 +41,7 @@ export function WaveformVisualizer({
   const currentColorRef = useRef(DEFAULT_STROKE_COLOR);
   const targetColorRef = useRef(DEFAULT_STROKE_COLOR);
   const idlePhaseRef = useRef(0);
+  const drawRef = useRef<() => void>(() => {});
 
   // Update target color when language changes
   useEffect(() => {
@@ -70,53 +71,97 @@ export function WaveformVisualizer({
     [lerp]
   );
 
-  const draw = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+  // Keep draw function in a ref to allow self-referencing in rAF loop
+  useEffect(() => {
+    drawRef.current = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
 
-    // Handle high-DPI displays
-    const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    if (canvas.width !== rect.width * dpr || canvas.height !== rect.height * dpr) {
-      canvas.width = rect.width * dpr;
-      canvas.height = rect.height * dpr;
-      ctx.scale(dpr, dpr);
-    }
+      // Handle high-DPI displays
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      if (canvas.width !== rect.width * dpr || canvas.height !== rect.height * dpr) {
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+      }
 
-    const width = rect.width;
-    const height = rect.height;
-    const centerY = height / 2;
+      const width = rect.width;
+      const height = rect.height;
+      const centerY = height / 2;
 
-    // Clear canvas
-    ctx.clearRect(0, 0, width, height);
+      // Clear canvas
+      ctx.clearRect(0, 0, width, height);
 
-    // Smoothly transition stroke color
-    currentColorRef.current = lerpColor(
-      currentColorRef.current,
-      targetColorRef.current,
-      0.05
-    );
-    const strokeColor = currentColorRef.current;
+      // Smoothly transition stroke color
+      currentColorRef.current = lerpColor(
+        currentColorRef.current,
+        targetColorRef.current,
+        0.05
+      );
+      const strokeColor = currentColorRef.current;
 
-    if (isPlaying) {
-      // Draw real-time waveform from MusicEngine
-      const waveform = getWaveformData();
+      if (isPlaying) {
+        // Draw real-time waveform from MusicEngine
+        const waveform = getWaveformData();
 
-      if (waveform.length > 0) {
-        const sliceWidth = width / waveform.length;
+        if (waveform.length > 0) {
+          const sliceWidth = width / waveform.length;
 
-        // Main waveform
+          // Main waveform
+          ctx.beginPath();
+          ctx.strokeStyle = strokeColor;
+          ctx.lineWidth = 2;
+
+          for (let i = 0; i < waveform.length; i++) {
+            const x = i * sliceWidth;
+            const y = centerY + waveform[i] * centerY * 0.8;
+            if (i === 0) {
+              ctx.moveTo(x, y);
+            } else {
+              ctx.lineTo(x, y);
+            }
+          }
+          ctx.stroke();
+
+          // Mirror/reflection effect below centerline
+          ctx.beginPath();
+          ctx.strokeStyle = strokeColor;
+          ctx.globalAlpha = 0.2;
+          ctx.lineWidth = 1;
+
+          for (let i = 0; i < waveform.length; i++) {
+            const x = i * sliceWidth;
+            // Reflect: invert the displacement from center
+            const y = centerY - waveform[i] * centerY * 0.5;
+            if (i === 0) {
+              ctx.moveTo(x, y);
+            } else {
+              ctx.lineTo(x, y);
+            }
+          }
+          ctx.stroke();
+          ctx.globalAlpha = 1.0;
+        }
+      } else {
+        // Idle "heartbeat" sine wave animation
+        idlePhaseRef.current += 0.02;
+        const phase = idlePhaseRef.current;
+        const amplitude = 8;
+
+        // Main sine wave
         ctx.beginPath();
         ctx.strokeStyle = strokeColor;
-        ctx.lineWidth = 2;
+        ctx.globalAlpha = 0.4;
+        ctx.lineWidth = 1.5;
 
-        for (let i = 0; i < waveform.length; i++) {
-          const x = i * sliceWidth;
-          const y = centerY + waveform[i] * centerY * 0.8;
-          if (i === 0) {
+        for (let x = 0; x < width; x++) {
+          const normalizedX = (x / width) * Math.PI * 4;
+          const y = centerY + Math.sin(normalizedX + phase) * amplitude;
+          if (x === 0) {
             ctx.moveTo(x, y);
           } else {
             ctx.lineTo(x, y);
@@ -124,17 +169,16 @@ export function WaveformVisualizer({
         }
         ctx.stroke();
 
-        // Mirror/reflection effect below centerline
+        // Mirror reflection
         ctx.beginPath();
         ctx.strokeStyle = strokeColor;
-        ctx.globalAlpha = 0.2;
+        ctx.globalAlpha = 0.1;
         ctx.lineWidth = 1;
 
-        for (let i = 0; i < waveform.length; i++) {
-          const x = i * sliceWidth;
-          // Reflect: invert the displacement from center
-          const y = centerY - waveform[i] * centerY * 0.5;
-          if (i === 0) {
+        for (let x = 0; x < width; x++) {
+          const normalizedX = (x / width) * Math.PI * 4;
+          const y = centerY - Math.sin(normalizedX + phase) * amplitude * 0.6;
+          if (x === 0) {
             ctx.moveTo(x, y);
           } else {
             ctx.lineTo(x, y);
@@ -143,58 +187,18 @@ export function WaveformVisualizer({
         ctx.stroke();
         ctx.globalAlpha = 1.0;
       }
-    } else {
-      // Idle "heartbeat" sine wave animation
-      idlePhaseRef.current += 0.02;
-      const phase = idlePhaseRef.current;
-      const amplitude = 8;
 
-      // Main sine wave
-      ctx.beginPath();
-      ctx.strokeStyle = strokeColor;
-      ctx.globalAlpha = 0.4;
-      ctx.lineWidth = 1.5;
-
-      for (let x = 0; x < width; x++) {
-        const normalizedX = (x / width) * Math.PI * 4;
-        const y = centerY + Math.sin(normalizedX + phase) * amplitude;
-        if (x === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
-        }
-      }
-      ctx.stroke();
-
-      // Mirror reflection
-      ctx.beginPath();
-      ctx.strokeStyle = strokeColor;
-      ctx.globalAlpha = 0.1;
-      ctx.lineWidth = 1;
-
-      for (let x = 0; x < width; x++) {
-        const normalizedX = (x / width) * Math.PI * 4;
-        const y = centerY - Math.sin(normalizedX + phase) * amplitude * 0.6;
-        if (x === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
-        }
-      }
-      ctx.stroke();
-      ctx.globalAlpha = 1.0;
-    }
-
-    animationRef.current = requestAnimationFrame(draw);
+      animationRef.current = requestAnimationFrame(drawRef.current);
+    };
   }, [isPlaying, getWaveformData, lerpColor]);
 
   // Start/stop animation loop
   useEffect(() => {
-    animationRef.current = requestAnimationFrame(draw);
+    animationRef.current = requestAnimationFrame(drawRef.current);
     return () => {
       cancelAnimationFrame(animationRef.current);
     };
-  }, [draw]);
+  }, [isPlaying, getWaveformData, lerpColor]);
 
   return (
     <canvas
