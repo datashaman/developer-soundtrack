@@ -6,6 +6,7 @@ import {
   type SynthConfig,
   type ToneInstrument,
 } from "./synths";
+import { getNoteName } from "./scales";
 
 type RecursivePartial<T> = {
   [P in keyof T]?: T[P] extends Array<infer U>
@@ -45,6 +46,70 @@ function createSynthInstance(config: SynthConfig): ToneInstrument {
 }
 
 /**
+ * Detect if a commit message indicates a merge commit.
+ */
+export function isMergeCommit(message: string): boolean {
+  return message.toLowerCase().startsWith("merge ");
+}
+
+/**
+ * Detect if a commit message indicates a revert commit.
+ */
+export function isRevertCommit(message: string): boolean {
+  return message.toLowerCase().includes("revert");
+}
+
+/**
+ * Detect if a commit is the first commit of its day relative to the previous commit.
+ * Returns true if there is no previous commit or the previous commit is on a different calendar day.
+ */
+export function isFirstOfDay(
+  commit: Commit,
+  previousCommit: Commit | null
+): boolean {
+  if (!previousCommit) return true;
+  const currDate = new Date(commit.timestamp);
+  const prevDate = new Date(previousCommit.timestamp);
+  return (
+    currDate.getUTCFullYear() !== prevDate.getUTCFullYear() ||
+    currDate.getUTCMonth() !== prevDate.getUTCMonth() ||
+    currDate.getUTCDate() !== prevDate.getUTCDate()
+  );
+}
+
+/**
+ * Get the note name one semitone below a given note.
+ * E.g. "C4" → "B3", "D#3" → "D3"
+ */
+function semitoneBelowNote(note: string): string {
+  const noteNames = [
+    "C",
+    "C#",
+    "D",
+    "D#",
+    "E",
+    "F",
+    "F#",
+    "G",
+    "G#",
+    "A",
+    "A#",
+    "B",
+  ];
+  // Parse note name and octave
+  const match = note.match(/^([A-G]#?)(\d+)$/);
+  if (!match) return note;
+  const noteName = match[1];
+  const octave = parseInt(match[2], 10);
+  const idx = noteNames.indexOf(noteName);
+  if (idx === -1) return note;
+  if (idx === 0) {
+    return `B${octave - 1}`;
+  }
+  return `${noteNames[idx - 1]}${octave}`;
+}
+
+/**
  * MusicEngine — singleton audio engine for Developer Soundtrack.
  *
  * Signal chain per language synth:
@@ -74,6 +139,14 @@ export class MusicEngine {
       delay: Tone.FeedbackDelay;
     }
   >();
+
+  /** Special sound nodes — created lazily on first use */
+  private cymbalSynth: Tone.MetalSynth | null = null;
+  private graceSynth: Tone.Synth | null = null;
+  private arpeggioSynth: Tone.Synth | null = null;
+
+  /** Track previous commit for first-of-day detection */
+  private _previousCommit: Commit | null = null;
 
   // Sequential playback state
   private _commits: Commit[] = [];
@@ -149,7 +222,56 @@ export class MusicEngine {
   }
 
   /**
-   * Play a single commit as a musical note.
+   * Get or create the cymbal MetalSynth for merge commits.
+   */
+  private getCymbalSynth(): Tone.MetalSynth {
+    if (!this.cymbalSynth) {
+      this.cymbalSynth = new Tone.MetalSynth({
+        envelope: { attack: 0.001, decay: 0.4, release: 0.2 },
+        harmonicity: 5.1,
+        modulationIndex: 32,
+        resonance: 4000,
+        octaves: 1.5,
+        volume: -12,
+      } as RecursivePartial<Tone.MetalSynthOptions>);
+      this.cymbalSynth.connect(this.masterVolume!);
+    }
+    return this.cymbalSynth;
+  }
+
+  /**
+   * Get or create the grace note Synth for CI failure dissonance.
+   */
+  private getGraceSynth(): Tone.Synth {
+    if (!this.graceSynth) {
+      this.graceSynth = new Tone.Synth({
+        oscillator: { type: "triangle" },
+        envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.1 },
+        volume: -6,
+      } as RecursivePartial<Tone.SynthOptions>);
+      this.graceSynth.connect(this.masterVolume!);
+    }
+    return this.graceSynth;
+  }
+
+  /**
+   * Get or create the arpeggio Synth for first-of-day commits.
+   */
+  private getArpeggioSynth(): Tone.Synth {
+    if (!this.arpeggioSynth) {
+      this.arpeggioSynth = new Tone.Synth({
+        oscillator: { type: "sine" },
+        envelope: { attack: 0.01, decay: 0.15, sustain: 0, release: 0.2 },
+        volume: -10,
+      } as RecursivePartial<Tone.SynthOptions>);
+      this.arpeggioSynth.connect(this.masterVolume!);
+    }
+    return this.arpeggioSynth;
+  }
+
+  /**
+   * Play a single commit as a musical note, with special sounds for
+   * merges, reverts, first-of-day, and CI failures.
    */
   playCommit(commit: Commit): void {
     if (!this.initialized || !this.masterVolume) {
@@ -167,19 +289,67 @@ export class MusicEngine {
     chain.reverb.wet.value = musicalParams.effects.reverb;
     chain.delay.wet.value = musicalParams.effects.delay;
 
-    // Trigger the note — MetalSynth and NoiseSynth don't accept note names
-    const config = LANGUAGE_SYNTH_MAP[commit.primaryLanguage] ?? LANGUAGE_SYNTH_MAP["Other"];
+    const now = Tone.now();
+    const config =
+      LANGUAGE_SYNTH_MAP[commit.primaryLanguage] ??
+      LANGUAGE_SYNTH_MAP["Other"];
 
+    // --- Special sounds ---
+
+    // First-of-day: brief ascending arpeggio before the main note
+    if (isFirstOfDay(commit, this._previousCommit)) {
+      const arp = this.getArpeggioSynth();
+      // 3-note ascending arpeggio using scale degrees 0, 2, 4
+      const arpeggioNotes = [0, 2, 4].map((idx) =>
+        getNoteName("C", musicalParams.scale, idx, musicalParams.octave)
+      );
+      const arpDuration = 0.08;
+      for (let i = 0; i < arpeggioNotes.length; i++) {
+        arp.triggerAttackRelease(
+          arpeggioNotes[i],
+          arpDuration,
+          now + i * arpDuration,
+          0.4
+        );
+      }
+    }
+
+    // CI failure: dissonant grace note a semitone below the main note
+    if (commit.ciStatus === "fail") {
+      const grace = this.getGraceSynth();
+      const graceNote = semitoneBelowNote(musicalParams.note);
+      grace.triggerAttackRelease(graceNote, 0.08, now, 0.5);
+    }
+
+    // Revert commits: override envelope to slow attack, sharp release
+    if (isRevertCommit(commit.message)) {
+      // Temporarily modify envelope if the synth has one
+      const synthAny = chain.synth as unknown as Record<string, unknown>;
+      if (synthAny.envelope && typeof synthAny.envelope === "object") {
+        const env = synthAny.envelope as {
+          attack: number;
+          release: number;
+          _origAttack?: number;
+          _origRelease?: number;
+        };
+        env._origAttack = env.attack;
+        env._origRelease = env.release;
+        env.attack = musicalParams.duration * 0.7;
+        env.release = 0.05;
+      }
+    }
+
+    // Trigger the main note
     if (config.type === "NoiseSynth") {
       (chain.synth as Tone.NoiseSynth).triggerAttackRelease(
         musicalParams.duration,
-        Tone.now(),
+        now,
         musicalParams.velocity
       );
     } else if (config.type === "MetalSynth") {
       (chain.synth as Tone.MetalSynth).triggerAttackRelease(
         musicalParams.duration,
-        Tone.now(),
+        now,
         musicalParams.velocity
       );
     } else {
@@ -191,9 +361,36 @@ export class MusicEngine {
       ).triggerAttackRelease(
         musicalParams.note,
         musicalParams.duration,
-        Tone.now(),
+        now,
         musicalParams.velocity
       );
+    }
+
+    // Merge commits: subtle cymbal/crash layered on top
+    if (isMergeCommit(commit.message)) {
+      const cymbal = this.getCymbalSynth();
+      cymbal.triggerAttackRelease("8n", now, 0.3);
+    }
+
+    // Restore envelope for revert commits
+    if (isRevertCommit(commit.message)) {
+      const synthAny = chain.synth as unknown as Record<string, unknown>;
+      if (synthAny.envelope && typeof synthAny.envelope === "object") {
+        const env = synthAny.envelope as {
+          attack: number;
+          release: number;
+          _origAttack?: number;
+          _origRelease?: number;
+        };
+        if (env._origAttack !== undefined) {
+          env.attack = env._origAttack;
+          delete env._origAttack;
+        }
+        if (env._origRelease !== undefined) {
+          env.release = env._origRelease;
+          delete env._origRelease;
+        }
+      }
     }
   }
 
@@ -238,6 +435,7 @@ export class MusicEngine {
     this._playing = false;
     this._paused = false;
     this._currentIndex = 0;
+    this._previousCommit = null;
   }
 
   /**
@@ -310,6 +508,7 @@ export class MusicEngine {
       this.onError?.(err instanceof Error ? err : new Error(String(err)));
     }
 
+    this._previousCommit = commit;
     this._currentIndex++;
 
     if (this._currentIndex >= this._commits.length) {
@@ -365,6 +564,7 @@ export class MusicEngine {
   dispose(): void {
     this.stop();
     this._commits = [];
+    this._previousCommit = null;
     this.onNotePlay = null;
     this.onPlaybackComplete = null;
     this.onError = null;
@@ -376,6 +576,14 @@ export class MusicEngine {
       chain.delay.dispose();
     }
     this.synthChains.clear();
+
+    // Dispose special sound synths
+    this.cymbalSynth?.dispose();
+    this.graceSynth?.dispose();
+    this.arpeggioSynth?.dispose();
+    this.cymbalSynth = null;
+    this.graceSynth = null;
+    this.arpeggioSynth = null;
 
     this.waveformAnalyser?.dispose();
     this.fftAnalyser?.dispose();

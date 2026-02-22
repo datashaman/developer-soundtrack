@@ -150,7 +150,8 @@
         "Special sounds do not interfere with normal playback timing"
       ],
       "priority": 9,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-010",

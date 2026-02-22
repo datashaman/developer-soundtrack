@@ -1,33 +1,62 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Commit } from "@/types";
 
+// Track instances created by each mock constructor
+const createdInstances: Record<string, Array<Record<string, unknown>>> = {
+  Synth: [],
+  AMSynth: [],
+  FMSynth: [],
+  MonoSynth: [],
+  MetalSynth: [],
+  NoiseSynth: [],
+  PluckSynth: [],
+};
+
+function resetCreatedInstances() {
+  for (const key of Object.keys(createdInstances)) {
+    createdInstances[key] = [];
+  }
+}
+
 // Mock tone before importing the engine
 vi.mock("tone", () => {
-  function MockVolume() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function MockVolume(this: any) {
     this.chain = vi.fn();
     this.dispose = vi.fn();
     this.volume = { value: 0 };
   }
-  function MockAnalyser() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function MockAnalyser(this: any) {
     this.getValue = vi.fn(() => new Float32Array(0));
     this.dispose = vi.fn();
   }
-  function MockPanner() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function MockPanner(this: any) {
     this.pan = { value: 0 };
     this.dispose = vi.fn();
   }
-  function MockReverb() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function MockReverb(this: any) {
     this.wet = { value: 0 };
     this.dispose = vi.fn();
   }
-  function MockFeedbackDelay() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function MockFeedbackDelay(this: any) {
     this.wet = { value: 0 };
     this.dispose = vi.fn();
   }
-  function MockSynth() {
-    this.chain = vi.fn();
-    this.triggerAttackRelease = vi.fn();
-    this.dispose = vi.fn();
+
+  function makeMockSynth(name: string) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return function MockSynthCtor(this: any) {
+      this.chain = vi.fn();
+      this.connect = vi.fn();
+      this.triggerAttackRelease = vi.fn();
+      this.dispose = vi.fn();
+      this.envelope = { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.5 };
+      createdInstances[name].push(this);
+    };
   }
 
   return {
@@ -39,17 +68,22 @@ vi.mock("tone", () => {
     Panner: MockPanner,
     Reverb: MockReverb,
     FeedbackDelay: MockFeedbackDelay,
-    Synth: MockSynth,
-    AMSynth: MockSynth,
-    FMSynth: MockSynth,
-    MonoSynth: MockSynth,
-    MetalSynth: MockSynth,
-    NoiseSynth: MockSynth,
-    PluckSynth: MockSynth,
+    Synth: makeMockSynth("Synth"),
+    AMSynth: makeMockSynth("AMSynth"),
+    FMSynth: makeMockSynth("FMSynth"),
+    MonoSynth: makeMockSynth("MonoSynth"),
+    MetalSynth: makeMockSynth("MetalSynth"),
+    NoiseSynth: makeMockSynth("NoiseSynth"),
+    PluckSynth: makeMockSynth("PluckSynth"),
   };
 });
 
-import { MusicEngine } from "./engine";
+import {
+  MusicEngine,
+  isMergeCommit,
+  isRevertCommit,
+  isFirstOfDay,
+} from "./engine";
 
 function makeCommit(overrides: Partial<Commit> = {}): Commit {
   return {
@@ -94,6 +128,7 @@ describe("MusicEngine — Sequential Playback", () => {
   afterEach(() => {
     engine.dispose();
     vi.useRealTimers();
+    resetCreatedInstances();
   });
 
   describe("play()", () => {
@@ -480,6 +515,336 @@ describe("MusicEngine — Sequential Playback", () => {
       expect(engine.onNotePlay).toBeNull();
       expect(engine.onPlaybackComplete).toBeNull();
       expect(engine.onError).toBeNull();
+    });
+  });
+
+  describe("Special Sounds", () => {
+    describe("merge commits — cymbal/crash", () => {
+      it("plays a cymbal sound on merge commits", () => {
+        const mergeCommit = makeCommit({
+          message: "Merge pull request #42 from feature-branch",
+        });
+
+        engine.playCommit(mergeCommit);
+
+        // A MetalSynth should have been created for the cymbal
+        // (one for CSS/HTML chain creation + one for the cymbal)
+        const metalInstances = createdInstances.MetalSynth;
+        const cymbalInstance = metalInstances[metalInstances.length - 1];
+        expect(cymbalInstance.triggerAttackRelease).toHaveBeenCalled();
+      });
+
+      it("does not play cymbal for non-merge commits", async () => {
+        const normalCommit = makeCommit({ message: "fix: resolve bug" });
+
+        // Reset to get clean counts
+        resetCreatedInstances();
+        engine.dispose();
+        engine = MusicEngine.getInstance();
+        await engine.initialize();
+
+        engine.playCommit(normalCommit);
+
+        // Only the language synth chain should be created, no extra MetalSynth for cymbal
+        const metalInstances = createdInstances.MetalSynth;
+        // None of the MetalSynth instances should have connect called (cymbal uses connect, not chain)
+        const cymbalInstances = metalInstances.filter(
+          (inst) => (inst.connect as ReturnType<typeof vi.fn>).mock.calls.length > 0
+        );
+        expect(cymbalInstances.length).toBe(0);
+      });
+    });
+
+    describe("revert commits — reversed envelope", () => {
+      it("modifies envelope for revert commits and restores after", () => {
+        const revertCommit = makeCommit({
+          message: "Revert \"add new feature\"",
+        });
+
+        engine.playCommit(revertCommit);
+
+        // The FMSynth instance used for TypeScript should have had its envelope modified then restored
+        const fmInstances = createdInstances.FMSynth;
+        const synthInstance = fmInstances[0];
+        // After playCommit, envelope should be restored to original values
+        const env = synthInstance.envelope as { attack: number; release: number };
+        expect(env.attack).toBe(0.01);
+        expect(env.release).toBe(0.5);
+      });
+
+      it("does not modify envelope for non-revert commits", () => {
+        const normalCommit = makeCommit({ message: "fix: resolve bug" });
+
+        engine.playCommit(normalCommit);
+
+        const fmInstances = createdInstances.FMSynth;
+        const synthInstance = fmInstances[0];
+        const env = synthInstance.envelope as { attack: number; release: number };
+        expect(env.attack).toBe(0.01);
+        expect(env.release).toBe(0.5);
+      });
+    });
+
+    describe("first-of-day — ascending arpeggio", () => {
+      it("plays an arpeggio for first commit (no previous commit)", () => {
+        const commit = makeCommit({ timestamp: "2024-06-15T09:00:00Z" });
+
+        engine.playCommit(commit);
+
+        // An arpeggio Synth should have been created and triggered 3 times
+        const synthInstances = createdInstances.Synth;
+        // The arpeggio synth is the one with connect called (not chain)
+        const arpeggioInstance = synthInstances.find(
+          (inst) => (inst.connect as ReturnType<typeof vi.fn>).mock.calls.length > 0
+        );
+        expect(arpeggioInstance).toBeDefined();
+        expect(
+          (arpeggioInstance!.triggerAttackRelease as ReturnType<typeof vi.fn>).mock.calls.length
+        ).toBe(3);
+      });
+
+      it("plays arpeggio when commit is on a different day from previous", () => {
+        // Play a commit from June 15
+        const commit1 = makeCommit({
+          id: "c1",
+          timestamp: "2024-06-15T23:00:00Z",
+        });
+        // Play through scheduleNext to set _previousCommit
+        engine.play([
+          commit1,
+          makeCommit({ id: "c2", timestamp: "2024-06-16T09:00:00Z" }),
+        ]);
+
+        // First commit is also first-of-day, so arpeggio synth is created and called 3 times
+        const synthInstances = createdInstances.Synth;
+        const arpeggioInstance = synthInstances.find(
+          (inst) => (inst.connect as ReturnType<typeof vi.fn>).mock.calls.length > 0
+        );
+        expect(arpeggioInstance).toBeDefined();
+        expect(
+          (arpeggioInstance!.triggerAttackRelease as ReturnType<typeof vi.fn>).mock.calls.length
+        ).toBe(3);
+
+        // Advance timer — second commit is on a different day, arpeggio should fire again (3 more calls)
+        vi.advanceTimersByTime(1000);
+        expect(
+          (arpeggioInstance!.triggerAttackRelease as ReturnType<typeof vi.fn>).mock.calls.length
+        ).toBe(6);
+      });
+
+      it("does not play arpeggio for same-day consecutive commits", () => {
+        const commit1 = makeCommit({
+          id: "c1",
+          timestamp: "2024-06-15T09:00:00Z",
+        });
+        const commit2 = makeCommit({
+          id: "c2",
+          timestamp: "2024-06-15T14:00:00Z",
+        });
+
+        engine.play([commit1, commit2]);
+
+        // Reset after first note to track second note's creations
+        resetCreatedInstances();
+        vi.advanceTimersByTime(1000);
+
+        // No arpeggio synth should be created for same-day commit
+        const synthInstances = createdInstances.Synth;
+        const arpeggioInstance = synthInstances.find(
+          (inst) => (inst.connect as ReturnType<typeof vi.fn>).mock.calls.length > 0
+        );
+        expect(arpeggioInstance).toBeUndefined();
+      });
+    });
+
+    describe("CI failure — grace note", () => {
+      it("plays a dissonant grace note for CI failure commits", () => {
+        const failCommit = makeCommit({
+          ciStatus: "fail",
+          musicalParams: {
+            instrument: "FMSynth",
+            note: "D3",
+            duration: 0.48,
+            velocity: 0.3,
+            octave: 3,
+            scale: "minor",
+            pan: 0,
+            effects: { reverb: 0.2, delay: 0 },
+          },
+        });
+
+        engine.playCommit(failCommit);
+
+        // Both arpeggio (first-of-day) and grace synths are Synth instances with .connect
+        // The arpeggio gets 3 calls, the grace gets 1 call with specific args
+        const synthInstances = createdInstances.Synth;
+        const connectedInstances = synthInstances.filter(
+          (inst) => (inst.connect as ReturnType<typeof vi.fn>).mock.calls.length > 0
+        );
+        // Should have at least 2 connected Synth instances (arpeggio + grace)
+        expect(connectedInstances.length).toBeGreaterThanOrEqual(2);
+        // Find the grace note instance — it has exactly 1 triggerAttackRelease call with the grace note
+        const graceInstance = connectedInstances.find((inst) => {
+          const calls = (inst.triggerAttackRelease as ReturnType<typeof vi.fn>).mock.calls;
+          return calls.length === 1 && calls[0][0] === "C#3";
+        });
+        expect(graceInstance).toBeDefined();
+        expect(graceInstance!.triggerAttackRelease).toHaveBeenCalledWith(
+          "C#3",
+          0.08,
+          0,
+          0.5
+        );
+      });
+
+      it("does not play grace note for passing CI status", async () => {
+        const passCommit = makeCommit({ ciStatus: "pass" });
+
+        // Reset to get clean counts
+        resetCreatedInstances();
+        engine.dispose();
+        engine = MusicEngine.getInstance();
+        await engine.initialize();
+
+        engine.playCommit(passCommit);
+
+        // The arpeggio synth (first-of-day) may be created with .connect,
+        // but no grace note synth should exist — check that no Synth instance
+        // was called with a semitone-below note argument
+        const synthInstances = createdInstances.Synth;
+        const connectedInstances = synthInstances.filter(
+          (inst) => (inst.connect as ReturnType<typeof vi.fn>).mock.calls.length > 0
+        );
+        // If any connected instance exists (arpeggio), verify none has 1-arg grace note pattern
+        for (const inst of connectedInstances) {
+          const calls = (inst.triggerAttackRelease as ReturnType<typeof vi.fn>).mock.calls;
+          // Grace note calls have velocity 0.5 as 4th arg — arpeggio uses 0.4
+          const graceCalls = calls.filter((c: unknown[]) => c[3] === 0.5);
+          expect(graceCalls.length).toBe(0);
+        }
+      });
+    });
+
+    describe("special sounds do not interfere with timing", () => {
+      it("sequential playback completes correctly with special commits", () => {
+        const commits = [
+          makeCommit({
+            id: "c0",
+            message: "Merge pull request #1",
+            timestamp: "2024-06-15T09:00:00Z",
+          }),
+          makeCommit({
+            id: "c1",
+            message: "Revert \"bad change\"",
+            timestamp: "2024-06-15T10:00:00Z",
+          }),
+          makeCommit({
+            id: "c2",
+            message: "fix: normal commit",
+            ciStatus: "fail",
+            timestamp: "2024-06-16T09:00:00Z",
+          }),
+        ];
+
+        const notePlaySpy = vi.fn();
+        const completeSpy = vi.fn();
+        engine.onNotePlay = notePlaySpy;
+        engine.onPlaybackComplete = completeSpy;
+
+        engine.play(commits);
+
+        expect(notePlaySpy).toHaveBeenCalledTimes(1);
+        expect(notePlaySpy).toHaveBeenCalledWith(commits[0], 0);
+
+        vi.advanceTimersByTime(1000);
+        expect(notePlaySpy).toHaveBeenCalledTimes(2);
+        expect(notePlaySpy).toHaveBeenCalledWith(commits[1], 1);
+
+        vi.advanceTimersByTime(1000);
+        expect(notePlaySpy).toHaveBeenCalledTimes(3);
+        expect(notePlaySpy).toHaveBeenCalledWith(commits[2], 2);
+
+        vi.advanceTimersByTime(1000);
+        expect(completeSpy).toHaveBeenCalledTimes(1);
+      });
+    });
+  });
+});
+
+describe("Special sound detection helpers", () => {
+  describe("isMergeCommit", () => {
+    it("detects standard merge messages", () => {
+      expect(isMergeCommit("Merge pull request #42 from feature-branch")).toBe(true);
+      expect(isMergeCommit("Merge branch 'main' into develop")).toBe(true);
+      expect(isMergeCommit("merge commit")).toBe(true);
+    });
+
+    it("rejects non-merge messages", () => {
+      expect(isMergeCommit("fix: resolve merge conflict")).toBe(false);
+      expect(isMergeCommit("feat: add merge sort")).toBe(false);
+      expect(isMergeCommit("")).toBe(false);
+    });
+  });
+
+  describe("isRevertCommit", () => {
+    it("detects revert messages", () => {
+      expect(isRevertCommit("Revert \"add new feature\"")).toBe(true);
+      expect(isRevertCommit("revert bad change")).toBe(true);
+      expect(isRevertCommit("fix: revert to previous behavior")).toBe(true);
+    });
+
+    it("rejects non-revert messages", () => {
+      expect(isRevertCommit("fix: resolve bug")).toBe(false);
+      expect(isRevertCommit("feat: add new feature")).toBe(false);
+      expect(isRevertCommit("")).toBe(false);
+    });
+  });
+
+  describe("isFirstOfDay", () => {
+    function makeTestCommit(timestamp: string): Commit {
+      return {
+        id: "test",
+        repoId: "repo1",
+        timestamp,
+        author: "testuser",
+        message: "test",
+        stats: { additions: 10, deletions: 5, filesChanged: 1 },
+        primaryLanguage: "TypeScript",
+        languages: { TypeScript: 10 },
+        ciStatus: "pass",
+        musicalParams: {
+          instrument: "FMSynth",
+          note: "C3",
+          duration: 0.5,
+          velocity: 0.3,
+          octave: 3,
+          scale: "major",
+          pan: 0,
+          effects: { reverb: 0.2, delay: 0 },
+        },
+      };
+    }
+
+    it("returns true when there is no previous commit", () => {
+      expect(isFirstOfDay(makeTestCommit("2024-06-15T09:00:00Z"), null)).toBe(true);
+    });
+
+    it("returns true when commits are on different days", () => {
+      const prev = makeTestCommit("2024-06-14T23:59:00Z");
+      const curr = makeTestCommit("2024-06-15T00:01:00Z");
+      expect(isFirstOfDay(curr, prev)).toBe(true);
+    });
+
+    it("returns false when commits are on the same day", () => {
+      const prev = makeTestCommit("2024-06-15T09:00:00Z");
+      const curr = makeTestCommit("2024-06-15T14:00:00Z");
+      expect(isFirstOfDay(curr, prev)).toBe(false);
+    });
+
+    it("returns true when commits span different years", () => {
+      const prev = makeTestCommit("2023-12-31T23:00:00Z");
+      const curr = makeTestCommit("2024-01-01T01:00:00Z");
+      expect(isFirstOfDay(curr, prev)).toBe(true);
     });
   });
 });

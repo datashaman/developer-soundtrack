@@ -94,3 +94,23 @@
   - The `seekTo()` method re-triggers `scheduleNext()` when playing (not paused), so it immediately plays the note at the seeked-to index
   - Exported callback types: `NotePlayCallback`, `PlaybackCompleteCallback`, `ErrorCallback` for consumers
 ---
+
+## 2026-02-22 - US-009
+- Added special sounds to MusicEngine for merge, revert, first-of-day, and CI failure commits
+  - **Merge commits**: Layered cymbal/crash via a lazy-created MetalSynth connected to masterVolume
+  - **Revert commits**: Temporarily overrides synth envelope to slow attack (70% of duration), sharp release (0.05s), then restores original values
+  - **First-of-day**: 3-note ascending arpeggio (scale degrees 0, 2, 4) via a lazy-created Synth, played before the main note
+  - **CI failure**: Dissonant grace note one semitone below the main note via a lazy-created Synth
+- Added exported helper functions: `isMergeCommit()`, `isRevertCommit()`, `isFirstOfDay()`
+- Added private helper `semitoneBelowNote()` for computing grace notes
+- Added `_previousCommit` tracking in `scheduleNext()` for first-of-day detection
+- Special synths (cymbal, grace, arpeggio) are lazy-created and disposed with the engine
+- 18 new tests (47 total in engine.test.ts) covering all special sounds, detection helpers, and timing integrity
+- Files changed: `src/lib/music/engine.ts`, `src/lib/music/engine.test.ts`
+- **Learnings for future iterations:**
+  - Special sound synths use `.connect(masterVolume)` (not `.chain()`) since they bypass the per-language panner/reverb/delay chain
+  - Use `getUTCDate()`/`getUTCMonth()`/`getUTCFullYear()` for date comparison to avoid timezone-dependent test failures
+  - When testing Tone.js mocks, the same mock constructor (e.g. `Synth`) may be used for both chain synths and special synths — distinguish by checking `.connect` vs `.chain` calls, or by argument patterns (velocity values)
+  - Lazy synth creation pattern: check `this.cymbalSynth` for null, create and `.connect()` on first use, dispose in `dispose()`
+  - `as unknown as Record<string, unknown>` double-cast needed when accessing envelope properties on ToneInstrument union type
+---
