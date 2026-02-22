@@ -379,3 +379,22 @@
   - Following same auth pattern as repos route: `auth()` → check `session?.accessToken` → 401 if missing
   - Following same error handling pattern: check `error instanceof Error` for message, check `"status" in error` for HTTP status code forwarding
 ---
+
+## 2026-02-22 - US-023
+- Implemented GET/PUT /api/settings route at `src/app/api/settings/route.ts`
+  - **GET**: Returns current user's settings (defaults if none saved) — response format `{ settings: UserSettings }`
+  - **PUT**: Accepts JSON body, merges with existing settings, saves to SQLite — response format `{ settings: UserSettings }`
+  - Both endpoints require auth (401 if not signed in), identify user by `session.user.email`
+  - PUT validates JSON body (400 for invalid JSON, non-object), handles partial updates by merging with current settings
+  - PUT overrides `userId` from session (ignores any userId in request body) — prevents impersonation
+  - Default settings for new users: tempo 1.0, volume 0.8, theme "dark"
+  - Graceful error handling for database errors (500)
+- 16 unit tests in `src/app/api/settings/route.test.ts` covering: auth (null session, missing token, no email), GET defaults, GET saved settings, GET errors, PUT auth, PUT invalid JSON, PUT non-object body, PUT full save, PUT partial merge, PUT userId override, PUT errors (Error, non-Error)
+- Files changed: `src/app/api/settings/route.ts`, `src/app/api/settings/route.test.ts`
+- **Learnings for future iterations:**
+  - Settings route uses `session.user?.email` as userId — consistent unique identifier from GitHub OAuth
+  - PUT merges body with existing settings before saving — allows partial updates (e.g. just changing theme)
+  - `userId` is always overridden from session after merge — `{ ...current, ...body, userId }` ensures body can't override userId
+  - Test helper pattern: `makeSession()` and `makePutRequest()` reduce boilerplate across test cases
+  - Mock pattern for DB modules: use separate `vi.fn()` variables wired through mock factory (same pattern as auth mock)
+---

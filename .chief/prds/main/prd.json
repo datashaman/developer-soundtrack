@@ -374,7 +374,8 @@
         "Returns sensible defaults for new users (tempo: 1.0, volume: 0.8, theme: \"dark\")"
       ],
       "priority": 23,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-024",
