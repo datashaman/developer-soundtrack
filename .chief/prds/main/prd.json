@@ -281,7 +281,8 @@
         "Unit tests cover common and edge cases"
       ],
       "priority": 17,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-018",
@@ -297,7 +298,8 @@
         "Rate limit awareness (respect X-RateLimit-Remaining headers)"
       ],
       "priority": 18,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-019",

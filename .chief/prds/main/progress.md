@@ -25,6 +25,8 @@
 - Auth: `Providers` wrapper (`SessionProvider`) in `src/components/shared/Providers.tsx`, used in root layout
 - Auth: Type augmentation for session `accessToken` in `src/types/next-auth.d.ts`
 - Animation loops: use `drawRef` pattern (store callback in ref) to avoid self-referencing `useCallback` lint errors
+- GitHub integration modules go in `src/lib/github/` (languages.ts, client.ts, commits.ts, etc.)
+- Language names must exactly match keys in `LANGUAGE_SYNTH_MAP` from `src/lib/music/synths.ts`
 
 ---
 
@@ -261,4 +263,43 @@
   - Session augmentation requires `declare module "next-auth"` and `declare module "next-auth/jwt"` in a `.d.ts` file
   - Client components using `useSession` need `SessionProvider` in a parent — use a `Providers` wrapper component in `src/components/shared/Providers.tsx`
   - Self-referencing `useCallback` for animation loops triggers lint error — use `drawRef` pattern: store draw function in a ref, update ref in useEffect, self-reference via `drawRef.current`
+---
+
+## 2026-02-22 - US-017
+- Implemented file extension to language detection in `src/lib/github/languages.ts`
+  - `EXTENSION_LANGUAGE_MAP`: maps 40+ file extensions to language names matching `LANGUAGE_SYNTH_MAP` keys
+  - `getLanguageForFile(filePath)`: extracts extension from path and returns language name ("Other" for unknown)
+  - `computeLanguageCounts(files)`: aggregates line counts per language from a list of changed files
+  - `getPrimaryLanguage(files)`: returns the language with the most lines changed
+  - `FileChange` interface: `{ filename: string, changes?: number }` for use by GitHub commit processing
+- 34 unit tests in `src/lib/github/languages.test.ts` covering all extensions, path handling, case insensitivity, dotfiles, multi-dot filenames, empty inputs, ties, and real-world scenarios
+- Files changed: `src/lib/github/languages.ts`, `src/lib/github/languages.test.ts`
+- **Learnings for future iterations:**
+  - First file in `src/lib/github/` — this is where GitHub API integration modules live
+  - Language names must exactly match keys in `LANGUAGE_SYNTH_MAP` from `src/lib/music/synths.ts` (e.g. "C++", not "Cpp")
+  - `FileChange` interface uses optional `changes` field — when absent, counts by file (1 per file) instead of by lines
+  - Extension extraction uses `lastIndexOf(".")` to handle multi-dot filenames like `app.test.ts`
+  - Files without dots (Makefile, LICENSE, Dockerfile) return "Other"
+---
+
+## 2026-02-22 - US-018
+- Implemented Octokit wrapper in `src/lib/github/client.ts` — simple factory function that creates authenticated Octokit client
+- Implemented commit fetching and processing in `src/lib/github/commits.ts`:
+  - `fetchCommits(octokit, options)` — fetches commits from GitHub with pagination, processes each one
+  - Fetches commit list via `repos.listCommits` with since/until/page/perPage params
+  - Fetches full commit details via `repos.getCommit` for diff stats and changed files
+  - Applies language detection from changed files using `getPrimaryLanguage`/`computeLanguageCounts`
+  - Computes and attaches musical parameters via `commitToMusicalParams`
+  - Returns `{ commits, hasMore, rateLimitRemaining }`
+  - `hasMore` determined by whether response length equals perPage
+  - Rate limit parsed from `x-ratelimit-remaining` response header
+- Installed `octokit` package (v5.0.5) as a dependency
+- 16 unit tests in `commits.test.ts` covering: API parameter passing, commit detail fetching, field mapping, language detection, musical params, author fallback, pagination (hasMore), rate limits, empty results, missing stats/files, multi-commit ordering, merge commit effects
+- Files changed: `package.json`, `pnpm-lock.yaml`, `src/lib/github/client.ts`, `src/lib/github/commits.ts`, `src/lib/github/commits.test.ts`
+- **Learnings for future iterations:**
+  - Octokit types are complex — use `mock as unknown as Parameters<typeof fetchCommits>[0]` for test mocks
+  - GitHub commit list API returns minimal data; full details (stats, files) require a separate `getCommit` call per SHA
+  - `author.login` can be null on GitHub (e.g., commits from non-GitHub users) — fall back to `commit.author.name`
+  - CI status is set to "unknown" here — US-019 will add proper CI status fetching
+  - Rate limit header key is `x-ratelimit-remaining` (lowercase in Octokit response headers)
 ---
