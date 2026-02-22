@@ -28,6 +28,8 @@
 - GitHub integration modules go in `src/lib/github/` (languages.ts, client.ts, commits.ts, etc.)
 - Language names must exactly match keys in `LANGUAGE_SYNTH_MAP` from `src/lib/music/synths.ts`
 - Commit caching: API routes should call `getCachedCommits()` from `src/lib/github/cache.ts` — it checks SQLite first, fetches from GitHub on miss/stale
+- API route auth pattern: call `auth()` from `@/lib/auth`, check `session?.accessToken`, return 401 if missing
+- API route test mocking for `auth()`: use separate `vi.fn<() => Promise<Session | null>>()` wired through mock factory to avoid NextAuth overloaded type issues
 
 ---
 
@@ -342,4 +344,20 @@
   - For mocking both DB and GitHub modules, use `vi.mock("../db/commits")` and `vi.mock("./commits")` separately — each gets its own mock factory
   - `last_fetched_at` is stored as ISO 8601 string on the repos table — already existed in schema from US-015
   - When fetching from GitHub on cache miss, all pages are fetched (not just the requested page) to fully populate the cache
+---
+
+## 2026-02-22 - US-021
+- Implemented GET /api/repos route at `src/app/api/repos/route.ts`
+  - Authenticates via `auth()` from NextAuth — returns 401 if no session or missing accessToken
+  - Creates Octokit client with session access token
+  - Fetches user's repos via `repos.listForAuthenticatedUser` sorted by `pushed` (desc), 100 per page
+  - Maps response to `{ fullName, description, language, pushedAt }` format
+  - Graceful error handling: preserves Octokit error status codes, returns 500 for unknown errors
+- 7 unit tests in `src/app/api/repos/route.test.ts` covering: unauthenticated (null session, missing token), repo listing, token passthrough, empty repos, Octokit errors, unknown errors
+- Files changed: `src/app/api/repos/route.ts`, `src/app/api/repos/route.test.ts`
+- **Learnings for future iterations:**
+  - NextAuth v5 `auth()` has overloaded types (middleware, route handler, standalone) — in tests, create a separate `vi.fn<() => Promise<Session | null>>()` and wire it through the mock factory to avoid type conflicts
+  - API route tests: mock `@/lib/auth` and `@/lib/github/client` at module level with `vi.mock()`, then use `vi.mocked()` or separate fn variables for type-safe mock control
+  - Cast mock session objects with `as Session` (import `Session` from `next-auth`) rather than complex conditional types
+  - Octokit error objects have a `status` property — check `"status" in error` to extract HTTP status for forwarding
 ---

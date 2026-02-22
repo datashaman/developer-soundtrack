@@ -343,7 +343,8 @@
         "Handles Octokit errors gracefully"
       ],
       "priority": 21,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-022",
