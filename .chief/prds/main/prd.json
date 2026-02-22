@@ -197,7 +197,8 @@
         "Canvas resizes responsively"
       ],
       "priority": 12,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-013",
@@ -213,7 +214,8 @@
         "Progress bar showing current position in the commit sequence (clickable to seek)"
       ],
       "priority": 13,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-014",

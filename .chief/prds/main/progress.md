@@ -16,6 +16,7 @@
 - Mocking Tone.js: use `function MockX() { this.prop = ... }` constructors, not arrow functions — `new` requires proper constructors
 - React hook tests: use `@testing-library/react` with `renderHook`/`act`, set `// @vitest-environment jsdom` comment at top of `.test.tsx` file
 - Dev deps for hook testing: `@testing-library/react`, `jsdom`
+- Component tests with `// @vitest-environment jsdom`: add explicit `cleanup()` in `afterEach` to prevent DOM accumulation across tests
 
 ---
 
@@ -148,4 +149,44 @@
   - `play()` is async in the hook (calls `ensureInitialized()`) even though `engine.play()` is sync — this gates audio context init behind user gesture
   - The engine's `onNotePlay` fires synchronously within `scheduleNext()` during `play()`, so state updates happen within the same `act()` block
   - Progress formula: `currentIndex / (commitCount - 1)` gives 0-1 range; returns 0 when commitCount is 0
+---
+
+## 2026-02-22 - US-012
+- Implemented `WaveformVisualizer` component in `src/components/player/WaveformVisualizer.tsx`
+  - Full-width canvas, 140px tall (`h-[140px] w-full`)
+  - Real-time waveform drawing from `getWaveformData()` using `requestAnimationFrame`
+  - Stroke color transitions smoothly to match current commit's language color via lerp
+  - Subtle mirror/reflection effect below centerline at 0.2 opacity (0.1 when idle)
+  - Idle/stopped state shows slow sine wave "heartbeat" animation (amplitude 8px, 4 cycles across width)
+  - Canvas resizes responsively using `getBoundingClientRect` + `devicePixelRatio` for high-DPI
+- Language color map defined inline: Python→#3572A5, JavaScript→#f1e05a, TypeScript→#3178c6, etc.
+- Default stroke color is `#00ffc8` (cyan accent matching project design spec)
+- 12 unit tests in `WaveformVisualizer.test.tsx` covering rendering, animation lifecycle, idle/playing states, mirror effect, language color transitions, empty data handling
+- Files changed: `src/components/player/WaveformVisualizer.tsx`, `src/components/player/WaveformVisualizer.test.tsx`
+- **Learnings for future iterations:**
+  - This is the first component in `src/components/player/` — directory needed to be created
+  - Canvas rendering tests require mocking `HTMLCanvasElement.prototype.getContext`, `getBoundingClientRect`, `requestAnimationFrame`, and `cancelAnimationFrame`
+  - Color lerp is done in RGB space for simplicity (parsing hex → interpolating → outputting `rgb()` string)
+  - The component takes `getWaveformData`, `isPlaying`, and optional `currentLanguage` as props (not using `useMusicEngine` directly — keeps it decoupled)
+  - Language colors are defined in the component; may be extracted to a shared module later when other components need them
+---
+
+## 2026-02-22 - US-013
+- Implemented `TransportControls` component in `src/components/player/TransportControls.tsx`
+  - Play/Pause toggle button — shows Play icon when stopped, Pause icon when playing
+  - Stop button — resets playback to beginning
+  - Skip backward / Skip forward buttons — disabled at sequence boundaries
+  - Tempo slider (0.3s to 5.0s) with numeric display showing value with one decimal
+  - Volume slider (0-100%) with mute toggle that remembers pre-mute volume
+  - Progress bar showing current position in commit sequence, clickable to seek
+  - Commit counter display (e.g. "4 / 10")
+- Component is decoupled from `useMusicEngine` — takes callback props for all actions
+- 24 unit tests in `TransportControls.test.tsx` covering all buttons, sliders, mute/unmute, progress bar seeking, disabled states, and initial values
+- Files changed: `src/components/player/TransportControls.tsx`, `src/components/player/TransportControls.test.tsx`
+- **Learnings for future iterations:**
+  - `@testing-library/react` needs explicit `cleanup()` in `afterEach` when using `// @vitest-environment jsdom` — without it, multiple renders accumulate in the DOM and `getByLabelText` finds duplicate elements
+  - SVG icons are inline (no icon library) — keeps dependencies minimal and bundle small
+  - Progress bar uses `role="progressbar"` with aria attributes for accessibility, and `getBoundingClientRect` + `clientX` for click-to-seek calculation
+  - Mute toggle stores pre-mute volume in a `useRef` to restore on unmute
+  - Component follows same prop-based pattern as `WaveformVisualizer` — decoupled from `useMusicEngine` for testability and reuse
 ---
