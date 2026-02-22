@@ -312,7 +312,8 @@
         "Integrates with commit fetching pipeline"
       ],
       "priority": 19,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-020",

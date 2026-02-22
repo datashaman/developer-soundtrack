@@ -1,6 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
 import { fetchCommits, type FetchCommitsOptions } from "./commits";
 
+vi.mock("./ci-status", () => ({
+  fetchCIStatus: vi.fn().mockResolvedValue("unknown"),
+}));
+
 function createMockOctokit(options?: {
   listCommitsData?: Array<{
     sha: string;
@@ -390,5 +394,28 @@ describe("fetchCommits", () => {
     );
     // Merge commits should get delay effect
     expect(result.commits[0].musicalParams.effects.delay).toBe(0.4);
+  });
+
+  it("integrates CI status from fetchCIStatus", async () => {
+    const { fetchCIStatus } = await import("./ci-status");
+    const mockFetchCIStatus = vi.mocked(fetchCIStatus);
+    mockFetchCIStatus.mockResolvedValueOnce("pass");
+
+    const mock = createMockOctokit({
+      listCommitsData: [makeCommitItem({ sha: "ci-sha" })],
+    });
+
+    const result = await fetchCommits(
+      mock as unknown as Parameters<typeof fetchCommits>[0],
+      baseOptions,
+    );
+
+    expect(mockFetchCIStatus).toHaveBeenCalledWith(
+      expect.anything(),
+      "testowner",
+      "testrepo",
+      "ci-sha",
+    );
+    expect(result.commits[0].ciStatus).toBe("pass");
   });
 });

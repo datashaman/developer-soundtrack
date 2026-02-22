@@ -1,11 +1,12 @@
 import type { Octokit } from "octokit";
-import type { Commit, CIStatus } from "@/types";
+import type { Commit } from "@/types";
 import {
   getPrimaryLanguage,
   computeLanguageCounts,
   type FileChange,
 } from "./languages";
 import { commitToMusicalParams } from "../music/mapping";
+import { fetchCIStatus } from "./ci-status";
 
 export interface FetchCommitsOptions {
   owner: string;
@@ -71,6 +72,8 @@ export async function fetchCommits(
       filesChanged: (detail.files ?? []).length,
     };
 
+    const ciStatus = await fetchCIStatus(octokit, owner, repo, item.sha);
+
     const partialCommit: Commit = {
       id: item.sha,
       repoId: `${owner}/${repo}`,
@@ -80,7 +83,7 @@ export async function fetchCommits(
       stats,
       primaryLanguage,
       languages,
-      ciStatus: "unknown" as CIStatus,
+      ciStatus,
       musicalParams: {
         instrument: "",
         note: "",

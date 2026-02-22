@@ -303,3 +303,21 @@
   - CI status is set to "unknown" here — US-019 will add proper CI status fetching
   - Rate limit header key is `x-ratelimit-remaining` (lowercase in Octokit response headers)
 ---
+
+## 2026-02-22 - US-019
+- Implemented CI status fetching module at `src/lib/github/ci-status.ts`
+  - `fetchCIStatus(octokit, owner, repo, sha)` — fetches check runs via `checks.listForRef` API
+  - Maps check run conclusions to CIStatus: failure/timed_out/cancelled → "fail", all success → "pass", queued/in_progress → "pending", no checks → "unknown"
+  - Failure takes priority over pending (checked first)
+- Integrated into commit fetching pipeline (`src/lib/github/commits.ts`):
+  - `fetchCommits` now calls `fetchCIStatus` for each commit instead of hardcoding `"unknown"`
+  - Musical parameters are computed after CI status is set, so scale selection (major/minor/dorian) reflects actual CI state
+- 11 unit tests in `ci-status.test.ts` covering: API params, no checks, all success, failure, timed_out, cancelled, in_progress, queued, failure priority over pending, skipped, single success
+- 1 new integration test in `commits.test.ts` verifying `fetchCIStatus` is called with correct params and result is used
+- Files changed: `src/lib/github/ci-status.ts`, `src/lib/github/ci-status.test.ts`, `src/lib/github/commits.ts`, `src/lib/github/commits.test.ts`
+- **Learnings for future iterations:**
+  - GitHub Check Runs API: `checks.listForRef` returns `{ check_runs: [...] }` — check `conclusion` for completed runs, `status` for in-progress
+  - Check run conclusions include: success, failure, neutral, cancelled, skipped, timed_out, action_required, stale
+  - When mocking a module that another module imports, use `vi.mock("./ci-status")` at the module level and `vi.mocked()` to type the mock
+  - Failure should be checked before pending — if any check failed, the overall status is "fail" regardless of other running checks
+---
