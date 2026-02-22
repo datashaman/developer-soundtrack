@@ -13,6 +13,7 @@
 - Tests go in `*.test.ts` files next to the source files
 - Utility modules go in `src/lib/utils/` (hash.ts, etc.)
 - djb2 hash function used for deterministic string → number mapping (no external deps)
+- Mocking Tone.js: use `function MockX() { this.prop = ... }` constructors, not arrow functions — `new` requires proper constructors
 
 ---
 
@@ -74,4 +75,22 @@
   - djb2 hash is simple, fast, and sufficient for deterministic mapping without external deps
   - Use `>>> 0` to ensure unsigned 32-bit integers in JavaScript bitwise operations
   - Linear congruential generator (`seed * 1103515245 + 12345`) works well for deterministic pseudo-random sequences from a single seed
+---
+
+## 2026-02-22 - US-008
+- Added sequential playback to MusicEngine in `src/lib/music/engine.ts`
+  - `play(commits, startIndex?)` — begins sequential playback using setTimeout scheduling
+  - `pause()` / `resume()` — stop and continue from current position
+  - `stop()` — halt and reset to beginning
+  - `seekTo(index)` — jump to specific commit in the sequence
+  - `setTempo(secondsBetweenNotes)` — adjusts playback speed (0.3s to 5.0s range)
+  - Callbacks: `onNotePlay`, `onPlaybackComplete`, `onError`
+  - State accessors: `playing`, `paused`, `currentIndex`, `currentCommit`, `commitCount`, `tempo`
+- 29 unit tests in `src/lib/music/engine.test.ts` covering play, pause, resume, stop, seekTo, setTempo, callbacks, state accessors, and dispose
+- Files changed: `src/lib/music/engine.ts`, `src/lib/music/engine.test.ts`
+- **Learnings for future iterations:**
+  - Mocking Tone.js for tests requires `function` constructors (not arrow functions) — `vi.fn(() => obj)` fails with "not a constructor" when used with `new`
+  - `scheduleNext()` plays the current note then increments `_currentIndex` — so after play, `currentIndex` points to the *next* note to be played
+  - The `seekTo()` method re-triggers `scheduleNext()` when playing (not paused), so it immediately plays the note at the seeked-to index
+  - Exported callback types: `NotePlayCallback`, `PlaybackCompleteCallback`, `ErrorCallback` for consumers
 ---

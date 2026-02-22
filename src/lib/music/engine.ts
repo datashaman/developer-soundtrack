@@ -52,6 +52,10 @@ function createSynthInstance(config: SynthConfig): ToneInstrument {
  *
  * A shared Analyser node is tapped off the master Volume for waveform/FFT data.
  */
+export type NotePlayCallback = (commit: Commit, index: number) => void;
+export type PlaybackCompleteCallback = () => void;
+export type ErrorCallback = (error: Error) => void;
+
 export class MusicEngine {
   private static instance: MusicEngine | null = null;
 
@@ -70,6 +74,19 @@ export class MusicEngine {
       delay: Tone.FeedbackDelay;
     }
   >();
+
+  // Sequential playback state
+  private _commits: Commit[] = [];
+  private _currentIndex = 0;
+  private _playing = false;
+  private _paused = false;
+  private _tempo = 1.0; // seconds between notes
+  private _playbackTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Callbacks
+  onNotePlay: NotePlayCallback | null = null;
+  onPlaybackComplete: PlaybackCompleteCallback | null = null;
+  onError: ErrorCallback | null = null;
 
   private constructor() {}
 
@@ -181,6 +198,135 @@ export class MusicEngine {
   }
 
   /**
+   * Begin sequential playback of a list of commits.
+   */
+  play(commits: Commit[], startIndex = 0): void {
+    if (!this.initialized) {
+      this.onError?.(new Error("MusicEngine not initialized. Call initialize() first."));
+      return;
+    }
+    this._commits = commits;
+    this._currentIndex = Math.max(0, Math.min(startIndex, commits.length - 1));
+    this._playing = true;
+    this._paused = false;
+    this.scheduleNext();
+  }
+
+  /**
+   * Pause playback at the current position.
+   */
+  pause(): void {
+    if (!this._playing || this._paused) return;
+    this._paused = true;
+    this.clearTimer();
+  }
+
+  /**
+   * Resume playback from the paused position.
+   */
+  resume(): void {
+    if (!this._playing || !this._paused) return;
+    this._paused = false;
+    this.scheduleNext();
+  }
+
+  /**
+   * Stop playback and reset to the beginning.
+   */
+  stop(): void {
+    this.clearTimer();
+    this._playing = false;
+    this._paused = false;
+    this._currentIndex = 0;
+  }
+
+  /**
+   * Jump to a specific commit in the sequence.
+   */
+  seekTo(index: number): void {
+    if (this._commits.length === 0) return;
+    this._currentIndex = Math.max(0, Math.min(index, this._commits.length - 1));
+    // If currently playing, restart scheduling from the new position
+    if (this._playing && !this._paused) {
+      this.clearTimer();
+      this.scheduleNext();
+    }
+  }
+
+  /**
+   * Adjust playback speed (seconds between notes, 0.3-5.0 range).
+   */
+  setTempo(secondsBetweenNotes: number): void {
+    this._tempo = Math.min(Math.max(secondsBetweenNotes, 0.3), 5.0);
+  }
+
+  /** Current playback state accessors */
+  get playing(): boolean {
+    return this._playing;
+  }
+
+  get paused(): boolean {
+    return this._paused;
+  }
+
+  get currentIndex(): number {
+    return this._currentIndex;
+  }
+
+  get currentCommit(): Commit | null {
+    if (this._commits.length === 0) return null;
+    return this._commits[this._currentIndex] ?? null;
+  }
+
+  get commitCount(): number {
+    return this._commits.length;
+  }
+
+  get tempo(): number {
+    return this._tempo;
+  }
+
+  private clearTimer(): void {
+    if (this._playbackTimer !== null) {
+      clearTimeout(this._playbackTimer);
+      this._playbackTimer = null;
+    }
+  }
+
+  private scheduleNext(): void {
+    if (!this._playing || this._paused) return;
+    if (this._currentIndex >= this._commits.length) {
+      this._playing = false;
+      this._paused = false;
+      this.onPlaybackComplete?.();
+      return;
+    }
+
+    const commit = this._commits[this._currentIndex];
+    try {
+      this.playCommit(commit);
+      this.onNotePlay?.(commit, this._currentIndex);
+    } catch (err) {
+      this.onError?.(err instanceof Error ? err : new Error(String(err)));
+    }
+
+    this._currentIndex++;
+
+    if (this._currentIndex >= this._commits.length) {
+      // Last note played; fire complete after the note's duration
+      this._playbackTimer = setTimeout(() => {
+        this._playing = false;
+        this._paused = false;
+        this.onPlaybackComplete?.();
+      }, this._tempo * 1000);
+    } else {
+      this._playbackTimer = setTimeout(() => {
+        this.scheduleNext();
+      }, this._tempo * 1000);
+    }
+  }
+
+  /**
    * Get current waveform data for visualization.
    */
   getWaveformData(): Float32Array {
@@ -217,6 +363,12 @@ export class MusicEngine {
    * Dispose all synths, effects, and nodes. Resets the singleton.
    */
   dispose(): void {
+    this.stop();
+    this._commits = [];
+    this.onNotePlay = null;
+    this.onPlaybackComplete = null;
+    this.onError = null;
+
     for (const chain of this.synthChains.values()) {
       chain.synth.dispose();
       chain.panner.dispose();

@@ -135,7 +135,8 @@
         "onError callback fires on audio errors"
       ],
       "priority": 8,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-009",
