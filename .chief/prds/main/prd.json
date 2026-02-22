@@ -389,7 +389,8 @@
         "Supports refetching when params change"
       ],
       "priority": 24,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-025",

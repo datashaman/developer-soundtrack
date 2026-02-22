@@ -398,3 +398,29 @@
   - Test helper pattern: `makeSession()` and `makePutRequest()` reduce boilerplate across test cases
   - Mock pattern for DB modules: use separate `vi.fn()` variables wired through mock factory (same pattern as auth mock)
 ---
+
+## 2026-02-22 - US-024
+- Implemented `useCommits` React hook in `src/hooks/useCommits.ts`
+  - Accepts `{ repo, from?, to?, limit? }` params
+  - Returns `{ commits, isLoading, error, hasMore, loadMore }`
+  - Fetches from `/api/commits` with proper query params
+  - Aborts in-flight requests when params change (AbortController)
+  - `loadMore()` appends next page commits; no-ops when loading or no more pages
+  - Resets commits when repo changes to null
+  - Refetches page 1 (replacing existing commits) when repo/from/to/limit change
+  - Graceful error handling: API errors, network failures, non-JSON responses
+- 16 unit tests in `src/hooks/useCommits.test.tsx` covering:
+  - Initial state, no-fetch when repo null, successful fetch, query param passing
+  - Error handling (API errors, network errors, non-JSON errors)
+  - Pagination: loadMore appends, loadMore no-op when hasMore=false or isLoading
+  - Refetching: repo change, date range change, repo→null reset
+  - Replaces (not appends) commits on param change
+  - Default limit of 100
+- Files changed: `src/hooks/useCommits.ts`, `src/hooks/useCommits.test.tsx`
+- **Learnings for future iterations:**
+  - Hook tests that use `fetch` mock: use `globalThis.fetch = vi.fn()` pattern, restore original in `afterEach`
+  - Use `waitFor` from `@testing-library/react` for async state updates instead of manual `act` + sleep
+  - `vi.useFakeTimers({ shouldAdvanceTime: true })` needed when testing hooks with async operations and AbortController
+  - `URLSearchParams` encodes `/` as `%2F` and `:` as `%3A` — test assertions need encoded values
+  - AbortController abort in useEffect cleanup prevents state updates on unmounted/stale renders
+---
