@@ -359,7 +359,8 @@
         "Handles missing/invalid params with appropriate error responses"
       ],
       "priority": 22,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-023",

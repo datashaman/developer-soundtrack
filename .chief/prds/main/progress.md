@@ -361,3 +361,21 @@
   - Cast mock session objects with `as Session` (import `Session` from `next-auth`) rather than complex conditional types
   - Octokit error objects have a `status` property — check `"status" in error` to extract HTTP status for forwarding
 ---
+
+## 2026-02-22 - US-022
+- Implemented GET /api/commits route at `src/app/api/commits/route.ts`
+  - Authenticates via `auth()` from NextAuth — returns 401 if no session or missing accessToken
+  - Required query param: `repo` (owner/repo format) — returns 400 if missing or invalid format
+  - Optional query params: `from` (ISO date), `to` (ISO date), `page` (default 1), `limit` (default 100, max 100)
+  - Validates page (>= 1) and limit (1-100) parameters — returns 400 on invalid values
+  - Delegates to `getCachedCommits()` from cache layer (US-020) for cache-first fetching
+  - Response format: `{ commits, total, page, hasMore }` — does not expose internal `fromCache` field
+  - Graceful error handling: preserves error status codes from Octokit/cache layer, returns 500 for unknown errors
+- 17 unit tests in `src/app/api/commits/route.test.ts` covering: auth (null session, missing token), missing repo, invalid repo format, invalid page/limit, default pagination, param passthrough, token passthrough, empty results, hasMore, error handling (Octokit errors, unknown errors)
+- Files changed: `src/app/api/commits/route.ts`, `src/app/api/commits/route.test.ts`
+- **Learnings for future iterations:**
+  - API route tests for routes with query params: create `NextRequest` with `new NextRequest(new URL(url, "http://localhost:3000"))` — the URL base is required
+  - The `getCachedCommits` result includes `fromCache` which is an internal detail — the API route should strip it from the response
+  - Following same auth pattern as repos route: `auth()` → check `session?.accessToken` → 401 if missing
+  - Following same error handling pattern: check `error instanceof Error` for message, check `"status" in error` for HTTP status code forwarding
+---
