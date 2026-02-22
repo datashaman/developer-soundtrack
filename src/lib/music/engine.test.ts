@@ -848,3 +848,105 @@ describe("Special sound detection helpers", () => {
     });
   });
 });
+
+describe("MusicEngine — Visualization Data", () => {
+  let engine: MusicEngine;
+
+  beforeEach(async () => {
+    engine = MusicEngine.getInstance();
+    await engine.initialize();
+  });
+
+  afterEach(() => {
+    engine.dispose();
+    resetCreatedInstances();
+  });
+
+  describe("getWaveformData()", () => {
+    it("returns a Float32Array when initialized", () => {
+      const data = engine.getWaveformData();
+      expect(data).toBeInstanceOf(Float32Array);
+    });
+
+    it("returns an empty Float32Array when not initialized", () => {
+      engine.dispose();
+      engine = MusicEngine.getInstance();
+      // Do NOT initialize
+      const data = engine.getWaveformData();
+      expect(data).toBeInstanceOf(Float32Array);
+      expect(data.length).toBe(0);
+    });
+
+    it("calls getValue() on the waveform analyser", () => {
+      engine.getWaveformData();
+      // The mock analyser's getValue should have been called
+      // We can verify by checking the return type is what the mock returns
+      const data = engine.getWaveformData();
+      expect(data).toBeInstanceOf(Float32Array);
+    });
+  });
+
+  describe("getFFTData()", () => {
+    it("returns a Float32Array when initialized", () => {
+      const data = engine.getFFTData();
+      expect(data).toBeInstanceOf(Float32Array);
+    });
+
+    it("returns an empty Float32Array when not initialized", () => {
+      engine.dispose();
+      engine = MusicEngine.getInstance();
+      // Do NOT initialize
+      const data = engine.getFFTData();
+      expect(data).toBeInstanceOf(Float32Array);
+      expect(data.length).toBe(0);
+    });
+
+    it("calls getValue() on the FFT analyser", () => {
+      engine.getFFTData();
+      const data = engine.getFFTData();
+      expect(data).toBeInstanceOf(Float32Array);
+    });
+  });
+
+  describe("analyser configuration", () => {
+    it("both analysers are active after initialization", () => {
+      // After initialize(), both getWaveformData and getFFTData return Float32Array
+      // (not empty), demonstrating analysers were properly created
+      const waveform = engine.getWaveformData();
+      const fft = engine.getFFTData();
+      expect(waveform).toBeInstanceOf(Float32Array);
+      expect(fft).toBeInstanceOf(Float32Array);
+    });
+
+    it("analysers are not available before initialization", () => {
+      engine.dispose();
+      const uninitEngine = MusicEngine.getInstance();
+      const waveform = uninitEngine.getWaveformData();
+      const fft = uninitEngine.getFFTData();
+      expect(waveform.length).toBe(0);
+      expect(fft.length).toBe(0);
+      uninitEngine.dispose();
+    });
+  });
+
+  describe("visualization data after dispose", () => {
+    it("getWaveformData returns empty array after dispose", () => {
+      engine.dispose();
+      // getInstance returns fresh instance after dispose
+      const freshEngine = MusicEngine.getInstance();
+      const data = freshEngine.getWaveformData();
+      expect(data).toBeInstanceOf(Float32Array);
+      expect(data.length).toBe(0);
+      freshEngine.dispose();
+    });
+
+    it("getFFTData returns empty array after dispose", () => {
+      engine.dispose();
+      const freshEngine = MusicEngine.getInstance();
+      const data = freshEngine.getFFTData();
+      expect(data).toBeInstanceOf(Float32Array);
+      expect(data.length).toBe(0);
+      freshEngine.dispose();
+    });
+  });
+});

@@ -164,7 +164,8 @@
         "Analyser node configured with appropriate FFT size (e.g. 2048)"
       ],
       "priority": 10,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-011",

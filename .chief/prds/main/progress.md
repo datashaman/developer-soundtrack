@@ -114,3 +114,17 @@
   - Lazy synth creation pattern: check `this.cymbalSynth` for null, create and `.connect()` on first use, dispose in `dispose()`
   - `as unknown as Record<string, unknown>` double-cast needed when accessing envelope properties on ToneInstrument union type
 ---
+
+## 2026-02-22 - US-010
+- Added visualization data tests to `src/lib/music/engine.test.ts` (10 new tests, 57 total in file)
+- Verified existing implementation of `getWaveformData()` and `getFFTData()` methods in `src/lib/music/engine.ts`
+- Both methods return `Float32Array` from Tone.js Analyser nodes (waveform and FFT)
+- Analyser nodes configured with FFT size 2048 in `initialize()`
+- Signal chain: masterVolume → waveformAnalyser → fftAnalyser → Destination
+- Methods return empty `Float32Array(0)` when engine is not initialized or disposed
+- Files changed: `src/lib/music/engine.test.ts`, `.chief/prds/main/prd.json`, `.chief/prds/main/progress.md`
+- **Learnings for future iterations:**
+  - The visualization data methods (`getWaveformData`, `getFFTData`) were already implemented as part of US-007 engine initialization — US-010 mainly needed test coverage
+  - Tone.js mock constructors (e.g. `MockAnalyser`) are plain functions, not `vi.fn()` spies — you can't use `toHaveBeenCalledWith` on them. Test behavior (return values) instead of mock internals
+  - `Tone.Volume` mock doesn't have `.mock.instances` since it's a constructor function, not a vi.fn — avoid accessing mock metadata on non-spy constructors
+---
