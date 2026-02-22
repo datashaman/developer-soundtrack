@@ -249,7 +249,8 @@
         "Database file is gitignored"
       ],
       "priority": 15,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-016",

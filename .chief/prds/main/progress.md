@@ -17,6 +17,10 @@
 - React hook tests: use `@testing-library/react` with `renderHook`/`act`, set `// @vitest-environment jsdom` comment at top of `.test.tsx` file
 - Dev deps for hook testing: `@testing-library/react`, `jsdom`
 - Component tests with `// @vitest-environment jsdom`: add explicit `cleanup()` in `afterEach` to prevent DOM accumulation across tests
+- Database: better-sqlite3 with WAL mode, foreign keys ON; db modules in `src/lib/db/`
+- DB tests: use in-memory SQLite (`:memory:`) with `vi.mock("./index")` to inject test db
+- JSON columns (languages, musical_params, etc.) stored as TEXT, parsed with JSON.parse/JSON.stringify
+- `pnpm.onlyBuiltDependencies` in package.json for native addons (better-sqlite3)
 
 ---
 
@@ -211,4 +215,25 @@
   - The `TestPlayer` component manages play/resume/stop state via a `hasStartedRef` ref — first play calls `play()`, subsequent calls use `resume()`
   - Language colors are duplicated between `WaveformVisualizer` and `TestPlayer` — may want to extract to a shared module
   - `&minus;` HTML entity works in JSX for the minus sign in diff stats display
+---
+
+## 2026-02-22 - US-015
+- Set up SQLite database with better-sqlite3 in `src/lib/db/`
+- Database connection module (`index.ts`) with singleton pattern, WAL mode, foreign keys ON
+- Schema creation (`schema.ts`) with repos, commits, user_settings tables and required indexes (idx_commits_repo_time, idx_commits_author)
+- CRUD for repos (`repos.ts`): create, getById, getByFullName, getAll, update (dynamic fields), delete
+- CRUD for commits (`commits.ts`): create, createMany (transactional batch), getById, getByRepo (with pagination + date range filtering), getByAuthor, deleteByRepo
+- CRUD for settings (`settings.ts`): get (returns defaults for new users), save (upsert via ON CONFLICT), delete
+- JSON columns (languages, musical_params, instrument_overrides, etc.) serialized as TEXT
+- 32 unit tests in `db.test.ts` covering all CRUD operations, schema creation, cascading deletes, pagination, date filtering, upserts, and defaults
+- Added `pnpm.onlyBuiltDependencies` to package.json for better-sqlite3 native addon
+- Files changed: `package.json`, `pnpm-lock.yaml`, `src/lib/db/index.ts`, `src/lib/db/schema.ts`, `src/lib/db/repos.ts`, `src/lib/db/commits.ts`, `src/lib/db/settings.ts`, `src/lib/db/db.test.ts`
+- **Learnings for future iterations:**
+  - better-sqlite3 requires native build — use `pnpm.onlyBuiltDependencies` in package.json (not .npmrc)
+  - `pnpm approve-builds` is interactive and doesn't work in non-interactive terminals — use package.json config instead
+  - In-memory SQLite (`:memory:`) is ideal for tests — fast, isolated, no cleanup needed
+  - `vi.mock("./index")` with a module-level `let db` variable lets tests inject their own database instance
+  - SQLite `INSERT OR REPLACE` is useful for commit upserts (same SHA can be re-fetched with updated CI status)
+  - Foreign keys need `PRAGMA foreign_keys = ON` each connection (SQLite default is OFF)
+  - SQLite stores dates as TEXT — ISO 8601 strings sort correctly for range queries
 ---
