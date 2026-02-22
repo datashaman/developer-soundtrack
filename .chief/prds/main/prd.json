@@ -117,7 +117,8 @@
         "setVolume(level) controls master volume (0-1)"
       ],
       "priority": 7,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-008",

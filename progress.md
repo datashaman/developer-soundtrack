@@ -5,6 +5,8 @@
 - Path alias `@/*` maps to `./src/*`
 - Tone.js v15 has strict types — use `RecursivePartial<T>` (not `Partial<T>`) when passing partial options to synth constructors; define it locally since it's not exported from the `tone` package
 - Use `Record<string, unknown>` for config option maps, then cast to `RecursivePartial<*Options>` at the point of construction
+- MusicEngine is a singleton — access via `MusicEngine.getInstance()`, must call `initialize()` from a user gesture before `playCommit()`
+- MetalSynth and NoiseSynth don't accept note names — must type-narrow before calling `triggerAttackRelease`
 
 ---
 
@@ -27,4 +29,17 @@
   - `RecursivePartial` is defined in `tone/Tone/core/util/Interface.ts` but NOT exported from the `tone` package — must be defined locally
   - The config map should use `Record<string, unknown>` for options to avoid fighting the type system; cast to the correct `RecursivePartial<*Options>` only at the point of synth construction
   - Exported types: `SynthType`, `SynthConfig`, `ToneInstrument` for use by other modules
+---
+
+## 2026-02-22 - US-007
+- What was implemented: MusicEngine singleton class with initialization, single note playback, analyser nodes, volume control, and dispose cleanup
+- Files changed: `src/lib/music/engine.ts` (created)
+- **Learnings for future iterations:**
+  - MusicEngine uses its own `createSynthInstance` (duplicated from synths.ts) because it needs per-language audio chains (Synth → Panner → Reverb → Delay → masterVolume) rather than bare synths
+  - MetalSynth and NoiseSynth don't accept note names in `triggerAttackRelease` — they only take duration, time, and velocity. Must type-narrow before calling.
+  - Tone.Reverb `wet` property controls mix level (0-1), same for FeedbackDelay
+  - Volume mapping: 0-1 linear maps to -Infinity..-60..0 dB (clamped === 0 is -Infinity for silence)
+  - Two separate Analyser nodes needed: one for waveform, one for FFT (each Analyser has a single `type`)
+  - Signal chain: masterVolume → waveformAnalyser → fftAnalyser → Destination
+  - The `LANGUAGE_SYNTH_MAP` from synths.ts is reused for config lookup; the existing `getSynthForLanguage` cache is separate from the engine's chain cache
 ---
