@@ -180,7 +180,8 @@
         "Cleans up on unmount"
       ],
       "priority": 11,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-012",

@@ -14,6 +14,8 @@
 - Utility modules go in `src/lib/utils/` (hash.ts, etc.)
 - djb2 hash function used for deterministic string → number mapping (no external deps)
 - Mocking Tone.js: use `function MockX() { this.prop = ... }` constructors, not arrow functions — `new` requires proper constructors
+- React hook tests: use `@testing-library/react` with `renderHook`/`act`, set `// @vitest-environment jsdom` comment at top of `.test.tsx` file
+- Dev deps for hook testing: `@testing-library/react`, `jsdom`
 
 ---
 
@@ -127,4 +129,23 @@
   - The visualization data methods (`getWaveformData`, `getFFTData`) were already implemented as part of US-007 engine initialization — US-010 mainly needed test coverage
   - Tone.js mock constructors (e.g. `MockAnalyser`) are plain functions, not `vi.fn()` spies — you can't use `toHaveBeenCalledWith` on them. Test behavior (return values) instead of mock internals
   - `Tone.Volume` mock doesn't have `.mock.instances` since it's a constructor function, not a vi.fn — avoid accessing mock metadata on non-spy constructors
+---
+
+## 2026-02-22 - US-011
+- Implemented `useMusicEngine` React hook in `src/hooks/useMusicEngine.ts`
+  - Exposes state: `isPlaying`, `currentCommit`, `currentIndex`, `progress` (0-1)
+  - Exposes controls: `play()`, `pause()`, `resume()`, `stop()`, `seekTo()`, `setTempo()`, `setVolume()`
+  - Exposes visualization: `getWaveformData()`, `getFFTData()`
+  - `play()` gates initialization behind user gesture (calls `engine.initialize()` on first use)
+  - Cleans up engine callbacks on unmount
+- Installed `@testing-library/react` and `jsdom` as dev dependencies for React hook testing
+- Updated `vitest.config.ts` to include `*.test.tsx` files
+- 15 unit tests in `src/hooks/useMusicEngine.test.tsx` covering initial state, all controls, callbacks, cleanup, and single-initialization
+- Files changed: `src/hooks/useMusicEngine.ts`, `src/hooks/useMusicEngine.test.tsx`, `vitest.config.ts`, `package.json`, `pnpm-lock.yaml`
+- **Learnings for future iterations:**
+  - React hook tests use `@testing-library/react` with `renderHook` and `act` — need `jsdom` environment (set via `// @vitest-environment jsdom` comment)
+  - The `useMusicEngine` hook wraps the MusicEngine singleton — it sets callbacks in a `useEffect` and clears them on unmount
+  - `play()` is async in the hook (calls `ensureInitialized()`) even though `engine.play()` is sync — this gates audio context init behind user gesture
+  - The engine's `onNotePlay` fires synchronously within `scheduleNext()` during `play()`, so state updates happen within the same `act()` block
+  - Progress formula: `currentIndex / (commitCount - 1)` gives 0-1 range; returns 0 when commitCount is 0
 ---
