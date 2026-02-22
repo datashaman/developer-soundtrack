@@ -41,3 +41,17 @@
   - Scale index wrapping needs modular arithmetic that handles negative values: `((n % len) + len) % len`
   - Music module lives at `src/lib/music/` — scales, synths, mapping, motifs, engine will all go here
 ---
+
+## 2026-02-22 - US-005
+- Implemented commit-to-musical-parameters mapping in `src/lib/music/mapping.ts`
+- Pure functions for each mapping: `mapDiffToPitch`, `mapDiffToDuration`, `mapFilesToVelocity`, `mapFilesToOctave`, `mapCIStatusToScale`, `mapTimeToEffects`
+- `commitToMusicalParams(commit)` composes all individual mappers into a complete `MusicalParams` object
+- Pan is set to 0 (author-specific pan handled by motif system in US-006)
+- 40 unit tests covering all individual mappers and the composite function, including edge cases (zero additions, massive diffs, all CI statuses, merge commits, late night commits)
+- Files changed: `src/lib/music/mapping.ts`, `src/lib/music/mapping.test.ts`
+- **Learnings for future iterations:**
+  - 50 additions / 30 = floor(1.67) = 1, so scaleIndex=1 in major scale gives D (interval 2 semitones), not E
+  - `getNoteName("C", "major", 1, 3)` returns "D3" — always verify note calculations manually
+  - The mapping module depends on `scales.ts` (for `getNoteName`) and `synths.ts` (for `getSynthConfig`) — these must exist first
+  - Merge commit detection uses `message.toLowerCase().startsWith("merge ")` — simple but covers standard GitHub merge messages
+---
