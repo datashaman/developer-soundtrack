@@ -438,7 +438,8 @@
         "Empty state if no commits found in range"
       ],
       "priority": 27,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-028",

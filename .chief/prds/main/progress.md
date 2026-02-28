@@ -30,6 +30,7 @@
 - Commit caching: API routes should call `getCachedCommits()` from `src/lib/github/cache.ts` — it checks SQLite first, fetches from GitHub on miss/stale
 - API route auth pattern: call `auth()` from `@/lib/auth`, check `session?.accessToken`, return 401 if missing
 - API route test mocking for `auth()`: use separate `vi.fn<() => Promise<Session | null>>()` wired through mock factory to avoid NextAuth overloaded type issues
+- React `react-hooks/refs` lint rule: cannot assign `ref.current = value` during render — use `useEffect` to sync state to refs
 
 ---
 
@@ -465,4 +466,26 @@
   - Recent sessions use localStorage for simplicity — no API persistence needed for this data
   - `getDateRange()` helper is defined in Dashboard component (not shared utility module) since it's only used here; US-043 will add a shared version later
   - For `select` elements with dark theme, add `className="bg-[#0a0a0e]"` to `<option>` elements for consistent dropdown styling
+---
+
+## 2026-02-28 - US-027
+- Implemented Player Page at `src/app/play/[owner]/[repo]/page.tsx` — the core player experience
+- Route extracts `owner`/`repo` from URL params, reads `from`/`to`/`range` from search params
+- Fetches commits via `useCommits` hook on mount with the repo and date range
+- Full layout (top to bottom): header bar with back link/repo name/settings gear, waveform visualizer, transport controls, now-playing card, timeline (commit node dots), instrument legend
+- Header shows: repo name (colored), commit count, formatted date range, and settings gear icon link
+- Loading state: centered spinner with "Loading commits..." text
+- Error state: red-tinted card with error message
+- Empty state: icon + "No commits found in this time range" + back link
+- Now-playing card shows author avatar initial, author login, commit message, language dot, diff stats (+/-), CI badge, musical info
+- Timeline shows horizontal scrollable row of commit nodes sized by diff, colored by language, white-bordered when active
+- Instrument legend shows active languages from current commits with colored dots
+- Playback logic follows same `hasStartedRef` pattern as TestPlayer — first play calls `play()`, subsequent calls use `resume()`
+- Files changed: `src/app/play/[owner]/[repo]/page.tsx`
+- **Learnings for future iterations:**
+  - React `react-hooks/refs` lint rule: cannot assign `ref.current = value` during render — must use `useEffect` to sync state to refs
+  - The `commitsRef` pattern (state → ref via useEffect) lets callbacks always access the latest commits without re-creating callbacks on every commits change
+  - Player page is a client component (`"use client"`) — uses `useParams` and `useSearchParams` from `next/navigation` for route/query params
+  - `useParams<{ owner: string; repo: string }>()` provides typed route params in Next.js App Router dynamic routes
+  - Language colors map, CI status display map, and date range formatter are duplicated from TestPlayer — could be extracted to shared module when more components need them
 ---
