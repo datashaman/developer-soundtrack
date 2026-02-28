@@ -6,6 +6,7 @@ import { useMusicEngine } from "@/hooks/useMusicEngine";
 import { WaveformVisualizer } from "./WaveformVisualizer";
 import { TransportControls } from "./TransportControls";
 import { NowPlaying } from "./NowPlaying";
+import { Timeline } from "./Timeline";
 
 /** Language color map for the commit info display */
 const LANGUAGE_COLORS: Record<string, string> = {
@@ -96,6 +97,13 @@ export function TestPlayer() {
 
       {/* Current Commit Info */}
       <NowPlaying currentCommit={currentCommit} />
+
+      {/* Timeline */}
+      <Timeline
+        commits={SAMPLE_COMMITS}
+        currentCommitId={currentCommit?.id ?? null}
+        onSeek={handleSeek}
+      />
 
       {/* Commit list */}
       <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] overflow-hidden">

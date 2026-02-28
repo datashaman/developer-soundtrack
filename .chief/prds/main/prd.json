@@ -473,7 +473,7 @@
         "Virtualizes rendering if \u003e200 commits (only renders visible nodes)"
       ],
       "priority": 29,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-030",

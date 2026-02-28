@@ -8,6 +8,7 @@ import { useMusicEngine } from "@/hooks/useMusicEngine";
 import { WaveformVisualizer } from "@/components/player/WaveformVisualizer";
 import { TransportControls } from "@/components/player/TransportControls";
 import { NowPlaying } from "@/components/player/NowPlaying";
+import { Timeline } from "@/components/player/Timeline";
 import type { Commit } from "@/types";
 
 /** Language color map */
@@ -212,30 +213,12 @@ export default function PlayerPage() {
             {/* Now Playing Card */}
             <NowPlaying currentCommit={currentCommit} />
 
-            {/* Timeline placeholder (US-029) */}
-            <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4">
-              <div className="flex items-center gap-2 overflow-x-auto py-2">
-                {commits.map((commit, idx) => {
-                  const isActive = currentCommit?.id === commit.id;
-                  const size = Math.max(8, Math.min(28, 8 + (commit.stats.additions + commit.stats.deletions) / 20));
-                  return (
-                    <button
-                      key={commit.id}
-                      onClick={() => handleSeek(idx)}
-                      className="shrink-0 rounded-full transition-all hover:scale-110"
-                      style={{
-                        width: size,
-                        height: size,
-                        backgroundColor: LANGUAGE_COLORS[commit.primaryLanguage] ?? LANGUAGE_COLORS.Other,
-                        border: isActive ? "2px solid white" : "2px solid transparent",
-                        opacity: isActive ? 1 : 0.6,
-                      }}
-                      title={`${commit.author}: ${commit.message}`}
-                    />
-                  );
-                })}
-              </div>
-            </div>
+            {/* Timeline */}
+            <Timeline
+              commits={commits}
+              currentCommitId={currentCommit?.id ?? null}
+              onSeek={handleSeek}
+            />
 
             {/* Instrument Legend placeholder (US-030) */}
             {activeLanguages.length > 0 && (
