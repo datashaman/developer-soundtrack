@@ -102,6 +102,18 @@ export async function getCommitById(id: string): Promise<Commit | undefined> {
   return result.rows.length > 0 ? rowToCommit(result.rows[0]) : undefined;
 }
 
+export async function getCommitsByIds(ids: string[]): Promise<Commit[]> {
+  if (ids.length === 0) return [];
+  await ensureSchema();
+  const db = getDatabase();
+  const placeholders = ids.map(() => "?").join(", ");
+  const result = await db.execute({
+    sql: `SELECT * FROM commits WHERE id IN (${placeholders}) ORDER BY timestamp ASC`,
+    args: ids,
+  });
+  return result.rows.map(rowToCommit);
+}
+
 export async function getCommitsByRepo(
   repoId: string,
   options?: {

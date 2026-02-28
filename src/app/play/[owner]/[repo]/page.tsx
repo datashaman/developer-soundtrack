@@ -12,6 +12,7 @@ import { Timeline } from "@/components/player/Timeline";
 import { MobileCommitList } from "@/components/player/MobileCommitList";
 import { InstrumentLegend } from "@/components/player/InstrumentLegend";
 import { LiveModeToggle } from "@/components/player/LiveModeToggle";
+import { exportToWav } from "@/lib/music/export";
 import type { Commit } from "@/types";
 
 function formatDateRange(from: string | null, to: string | null, range: string | null): string {
@@ -65,7 +66,12 @@ export default function PlayerPage() {
     setVolume,
     setEnabledLanguages,
     getWaveformData,
+    getTempo,
+    getVolume,
   } = useMusicEngine();
+
+  const [exportProgress, setExportProgress] = useState<number | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   // Load enabled languages from user settings
   useEffect(() => {
@@ -137,6 +143,25 @@ export default function PlayerPage() {
     }
   }, [sampleEvery, stop]);
 
+  const handleExport = useCallback(async () => {
+    if (displayCommits.length === 0) return;
+    setExportError(null);
+    setExportProgress(0);
+    try {
+      const filename = `soundtrack-${fullName.replace("/", "-")}-${new Date().toISOString().slice(0, 10)}.wav`;
+      await exportToWav(
+        displayCommits,
+        { tempo: getTempo(), volume: getVolume() },
+        filename,
+        (p) => setExportProgress(p)
+      );
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : "Export failed");
+    } finally {
+      setExportProgress(null);
+    }
+  }, [displayCommits, fullName, getTempo, getVolume]);
+
   // Compute unique active languages for instrument legend
   const activeLanguages = Array.from(new Set(displayCommits.map((c) => c.primaryLanguage)));
 
@@ -168,6 +193,28 @@ export default function PlayerPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          {displayCommits.length > 0 && (
+            <button
+              onClick={handleExport}
+              disabled={exportProgress !== null}
+              className="min-h-11 px-3 rounded-lg bg-accent/10 border border-accent/30 text-accent hover:bg-accent/20 hover:border-accent/50 font-mono text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              aria-label="Export to WAV"
+            >
+              {exportProgress !== null ? (
+                <>
+                  <span className="inline-block h-4 w-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                  <span>{exportProgress < 1 ? "Rendering..." : "Downloading..."}</span>
+                </>
+              ) : (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                  Export WAV
+                </>
+              )}
+            </button>
+          )}
           <LiveModeToggle owner={owner} repo={repo} />
           <Link
             href="/settings"
@@ -218,6 +265,13 @@ export default function PlayerPage() {
               GitHub API rate limit is low: {rateLimitRemaining} calls remaining.
               Data may be served from cache.
             </p>
+          </div>
+        )}
+
+        {/* Export error */}
+        {exportError && (
+          <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 mb-4 text-center">
+            <p className="text-sm text-red-400 font-mono">{exportError}</p>
           </div>
         )}
 

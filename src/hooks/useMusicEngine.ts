@@ -37,6 +37,10 @@ interface UseMusicEngineReturn {
   getWaveformData: () => Float32Array;
   /** Get current FFT data for visualization */
   getFFTData: () => Float32Array;
+  /** Get current tempo (seconds between notes) */
+  getTempo: () => number;
+  /** Get current volume (0-1) */
+  getVolume: () => number;
 }
 
 export function useMusicEngine(): UseMusicEngineReturn {
@@ -172,6 +176,9 @@ export function useMusicEngine(): UseMusicEngineReturn {
     return getEngine().getFFTData();
   }, [getEngine]);
 
+  const getTempo = useCallback(() => getEngine().tempo, [getEngine]);
+  const getVolume = useCallback(() => getEngine().volume, [getEngine]);
+
   return {
     isPlaying,
     currentCommit,
@@ -188,5 +195,7 @@ export function useMusicEngine(): UseMusicEngineReturn {
     setEnabledLanguages,
     getWaveformData,
     getFFTData,
+    getTempo,
+    getVolume,
   };
 }

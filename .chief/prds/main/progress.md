@@ -909,3 +909,18 @@
 - **Learnings for future iterations:**
   - US-050 was effectively completed incrementally as each related user story was implemented
 ---
+
+## 2026-02-28 - US-047
+- Implemented audio export to WAV (stretch goal) with client-side rendering
+  - **Export module** (`src/lib/music/export.ts`): Uses Tone.Offline() to render soundtrack faster than real-time; schedules same synth logic as MusicEngine (per-language chains, special sounds for merge/revert/first-of-day/CI-fail); encodes AudioBuffer to WAV format; triggers download
+  - **API route** POST `/api/export`: Accepts `{ commitIds: string[] }`, returns `{ commits: Commit[] }` — fetches commits from DB by IDs for shared-link use case (US-048); actual WAV generation is client-side
+  - **Export button**: In player page header when commits loaded; shows spinner + "Rendering..." / "Downloading..." during export; uses current tempo/volume from engine (added getTempo/getVolume to engine and useMusicEngine)
+  - **getCommitsByIds** added to `src/lib/db/commits.ts` for batch lookup
+  - **Exported semitoneBelowNote** from engine for use in export module
+- Spec called for server-side rendering via OfflineAudioContext — Web Audio API is browser-only; client-side with Tone.Offline() is the practical approach; API route provides commit fetch for future shared links
+- Files changed: `src/lib/music/export.ts` (new), `src/lib/music/engine.ts`, `src/lib/db/commits.ts`, `src/app/api/export/route.ts` (new), `src/app/api/export/route.test.ts` (new), `src/app/play/[owner]/[repo]/page.tsx`, `src/hooks/useMusicEngine.ts`
+- **Learnings for future iterations:**
+  - Tone.Offline(callback, duration) creates isolated context; all nodes must be created inside callback; scheduling uses absolute time (startTime = i * tempo)
+  - WAV encoding: 44-byte header (RIFF, fmt, data chunks) + interleaved 16-bit PCM; AudioBuffer.getChannelData(0/1) for stereo
+  - ToneAudioBuffer from Offline may have .get() returning underlying AudioBuffer — check at runtime
+---

@@ -756,7 +756,8 @@
         "Progress indicator during rendering"
       ],
       "priority": 47,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-048",

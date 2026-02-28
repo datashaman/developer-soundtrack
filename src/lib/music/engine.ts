@@ -81,7 +81,7 @@ export function isFirstOfDay(
  * Get the note name one semitone below a given note.
  * E.g. "C4" → "B3", "D#3" → "D3"
  */
-function semitoneBelowNote(note: string): string {
+export function semitoneBelowNote(note: string): string {
   const noteNames = [
     "C",
     "C#",
@@ -154,6 +154,7 @@ export class MusicEngine {
   private _playing = false;
   private _paused = false;
   private _tempo = 1.0; // seconds between notes
+  private _volume = 0.8; // 0-1
   private _playbackTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** Enabled languages — empty array means all enabled (default) */
@@ -573,8 +574,13 @@ export class MusicEngine {
   setVolume(level: number): void {
     if (!this.masterVolume) return;
     const clamped = Math.min(Math.max(level, 0), 1);
+    this._volume = clamped;
     // Map 0-1 to -Infinity..0 dB (use -60 as practical minimum)
     this.masterVolume.volume.value = clamped === 0 ? -Infinity : -60 + clamped * 60;
+  }
+
+  get volume(): number {
+    return this._volume;
   }
 
   /**
