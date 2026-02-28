@@ -66,7 +66,9 @@ export async function POST(request: NextRequest) {
   }
 
   const [owner, repo] = repoParam.split("/");
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const baseUrl =
+    process.env.NEXTAUTH_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
   const callbackUrl = `${baseUrl}/api/webhook`;
 
   try {
