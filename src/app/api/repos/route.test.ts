@@ -88,6 +88,7 @@ describe("GET /api/repos", () => {
     ]);
 
     expect(mockOctokit.rest.repos.listForAuthenticatedUser).toHaveBeenCalledWith({
+      visibility: "all",
       sort: "pushed",
       direction: "desc",
       per_page: 100,

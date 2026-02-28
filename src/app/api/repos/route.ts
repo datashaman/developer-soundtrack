@@ -11,6 +11,7 @@ export async function GET() {
   try {
     const octokit = createOctokitClient(session.accessToken);
     const { data } = await octokit.rest.repos.listForAuthenticatedUser({
+      visibility: "all",
       sort: "pushed",
       direction: "desc",
       per_page: 100,
