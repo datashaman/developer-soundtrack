@@ -724,7 +724,8 @@
         "Demo data covers multiple languages, authors, and CI statuses"
       ],
       "priority": 45,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-046",

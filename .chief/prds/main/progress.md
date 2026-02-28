@@ -836,3 +836,21 @@
   - Pre-existing test failures (Pusher "Options object must provide a cluster") were caused by missing `vi.mock` for `@/lib/pusher/server` — always mock external service clients in tests
   - React hook state updates from external callbacks (Pusher `bind`) must be wrapped in `act()` in tests
 ---
+
+## 2026-02-28 - US-045
+- Implemented demo mode for unauthenticated users on the landing page
+- Created `DemoPlayer` component in `src/components/player/DemoPlayer.tsx`:
+  - Full playback experience: waveform visualizer, transport controls, now-playing card
+  - Simplified — no timeline, no commit list, no settings, no repo selector
+  - Prominent "Sign in to play your own repos" CTA with "Connect with GitHub" button
+  - Uses hardcoded `SAMPLE_COMMITS` (12 commits across 11 languages, 5 authors, 4 CI statuses)
+- Updated `LandingPage.tsx` to use `DemoPlayer` instead of `TestPlayer`
+- 10 unit tests in `DemoPlayer.test.tsx` covering: waveform rendering, transport controls, now-playing card, sample commits count, no timeline, no commit list, CTA text, CTA button, signIn callback, no settings/repo selector
+- All 551 tests passing, typecheck clean
+- Files changed: `src/components/player/DemoPlayer.tsx` (new), `src/components/player/DemoPlayer.test.tsx` (new), `src/components/landing/LandingPage.tsx`
+- **Learnings for future iterations:**
+  - DemoPlayer is a simplified version of TestPlayer — same playback logic (hasStartedRef pattern) but without timeline, commit list, and with CTA
+  - The demo uses the same `SAMPLE_COMMITS` data that TestPlayer uses — no duplication
+  - Mock child components (WaveformVisualizer, TransportControls, NowPlaying) in page-level tests for simplicity — test each component individually in its own test file
+  - LandingPage now imports DemoPlayer instead of TestPlayer — TestPlayer is still used independently for the /test page if needed
+---

@@ -1,7 +1,7 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { TestPlayer } from "@/components/player/TestPlayer";
+import { DemoPlayer } from "@/components/player/DemoPlayer";
 
 export function LandingPage() {
   return (
@@ -43,7 +43,7 @@ export function LandingPage() {
             Live Demo
           </h2>
         </div>
-        <TestPlayer />
+        <DemoPlayer />
       </main>
     </div>
   );
