@@ -854,3 +854,28 @@
   - Mock child components (WaveformVisualizer, TransportControls, NowPlaying) in page-level tests for simplicity — test each component individually in its own test file
   - LandingPage now imports DemoPlayer instead of TestPlayer — TestPlayer is still used independently for the /test page if needed
 ---
+
+## 2026-02-28 - US-046
+- Implemented SEO and meta tags across all routes
+- **Root layout** (`src/app/layout.tsx`):
+  - Enhanced metadata with title template (`%s | Developer Soundtrack`), full description
+  - `metadataBase` set from `NEXTAUTH_URL` env var for absolute URL resolution
+  - OpenGraph tags: title, description, URL, siteName, type (website)
+  - Twitter card tags: `summary_large_image` card type, title, description
+- **OG image** (`src/app/opengraph-image.tsx`):
+  - Dynamic OG image generated via Next.js `ImageResponse` (edge runtime)
+  - 1200x630px image with project branding: dark background (#0a0a0e), waveform bars, title, "Listen to your code" tagline, language color dots
+  - Twitter image re-exported from same source (`src/app/twitter-image.tsx`)
+- **Settings page** — Added `src/app/settings/layout.tsx` with `title: "Settings"` metadata
+- **Player page** — Added `src/app/play/[owner]/[repo]/layout.tsx` with `generateMetadata` using dynamic route params (e.g., "owner/repo Soundtrack")
+- **Live page** — Added `src/app/play/[owner]/[repo]/live/layout.tsx` with `generateMetadata` (e.g., "owner/repo Live")
+- **Favicon** — Already existed at `src/app/favicon.ico` (kept as-is)
+- Files changed: `src/app/layout.tsx`, `src/app/opengraph-image.tsx` (new), `src/app/twitter-image.tsx` (new), `src/app/settings/layout.tsx` (new), `src/app/play/[owner]/[repo]/layout.tsx` (new), `src/app/play/[owner]/[repo]/live/layout.tsx` (new)
+- **Learnings for future iterations:**
+  - Next.js `opengraph-image.tsx` file convention auto-generates OG image and sets `<meta>` tags — no need to manually specify `images` in metadata when using this approach
+  - `twitter-image.tsx` can re-export from `opengraph-image.tsx` to share the same image generation logic
+  - Client component pages (`"use client"`) can't export `metadata` — add a `layout.tsx` in the same directory with `generateMetadata` for dynamic routes or `metadata` for static
+  - `generateMetadata` in Next.js App Router receives `params` as a `Promise` — must `await params` before accessing route params
+  - `metadataBase` should be set from env var (`NEXTAUTH_URL`) to generate correct absolute URLs for OG images in production
+  - `.next/dev/types/validator.ts` can get stale — delete `.next/dev/types/` to regenerate when seeing type errors in auto-generated files
+---

@@ -740,7 +740,8 @@
         "Favicon set"
       ],
       "priority": 46,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-047",

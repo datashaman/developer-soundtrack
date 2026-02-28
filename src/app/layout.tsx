@@ -14,8 +14,29 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Developer Soundtrack",
-  description: "Transform your commit history into generative, listenable music.",
+  title: {
+    default: "Developer Soundtrack — Listen to Your Code",
+    template: "%s | Developer Soundtrack",
+  },
+  description:
+    "Transform your GitHub commit history into generative, listenable music. Each commit becomes a musical event — languages set instruments, diffs control pitch, and CI status sets the key.",
+  metadataBase: new URL(
+    process.env.NEXTAUTH_URL || "http://localhost:3000",
+  ),
+  openGraph: {
+    title: "Developer Soundtrack — Listen to Your Code",
+    description:
+      "Transform your GitHub commit history into generative, listenable music. Each commit becomes a musical event.",
+    url: "/",
+    siteName: "Developer Soundtrack",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Developer Soundtrack — Listen to Your Code",
+    description:
+      "Transform your GitHub commit history into generative, listenable music. Each commit becomes a musical event.",
+  },
 };
 
 // Inline script to prevent flash of wrong theme on load
