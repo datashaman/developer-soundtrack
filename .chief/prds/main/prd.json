@@ -629,7 +629,8 @@
         "Success/error feedback on save"
       ],
       "priority": 39,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-040",

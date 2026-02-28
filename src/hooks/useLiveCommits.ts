@@ -18,10 +18,21 @@ export function useLiveCommits(repo: string | null): UseLiveCommitsReturn {
   const [latestCommit, setLatestCommit] = useState<Commit | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [prevRepo, setPrevRepo] = useState<string | null>(repo);
 
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const unmountedRef = useRef(false);
+
+  // Reset state during render when repo changes to null
+  if (repo !== prevRepo) {
+    setPrevRepo(repo);
+    if (!repo) {
+      setIsConnected(false);
+      setLatestCommit(null);
+      setError(null);
+    }
+  }
 
   const cleanup = useCallback(() => {
     if (reconnectTimerRef.current !== null) {
@@ -39,9 +50,6 @@ export function useLiveCommits(repo: string | null): UseLiveCommitsReturn {
 
     if (!repo) {
       cleanup();
-      setIsConnected(false);
-      setLatestCommit(null);
-      setError(null);
       return;
     }
 
@@ -92,7 +100,6 @@ export function useLiveCommits(repo: string | null): UseLiveCommitsReturn {
     return () => {
       unmountedRef.current = true;
       cleanup();
-      setIsConnected(false);
     };
   }, [repo, cleanup]);
 

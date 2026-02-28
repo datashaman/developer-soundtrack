@@ -676,3 +676,22 @@
   - Mock child components in page tests to avoid rendering complexity — use `vi.mock` with simple `data-testid` divs
   - When testing for text that may appear multiple times in DOM (e.g. repo name in header + body), use `getAllByText` instead of `getByText`
 ---
+
+## 2026-02-28 - US-039
+- Extended existing settings page at `/settings` with tempo, volume, and default repository controls
+- **Tempo slider**: range input (0.3s to 5.0s, step 0.1) with numeric input for precise entry, clamped to valid range
+- **Volume slider**: range input (0-100%, step 1) with percentage display
+- **Default repository dropdown**: populated from `/api/repos`, shows loading state, includes "None" option
+- **Settings persistence**: loads from `GET /api/settings` on mount, saves via `PUT /api/settings` with Save button
+- **Feedback**: "Saving..." disabled state during save, "Settings saved successfully" green text on success (auto-clears after 2s), red error message on failure
+- **Loading state**: full-screen "Loading settings..." shown while fetching settings
+- Theme section preserved with Dark/Light buttons from US-033
+- Also fixed pre-existing lint error in `useLiveCommits.ts`: moved `setState` calls from `useEffect` body to "adjust state during render" pattern with `prevRepo` state tracking
+- Files changed: `src/app/settings/page.tsx`, `src/hooks/useLiveCommits.ts`, `.chief/prds/main/prd.json`
+- **Learnings for future iterations:**
+  - Settings page was already partially built (theme section from US-033) — extended rather than created from scratch
+  - Volume stored as 0-1 float in API/DB but displayed as 0-100% in UI — convert with `* 100` / `/ 100`
+  - Settings page uses `useEffect` with cancelled flag pattern for both settings and repos loading — same pattern used across the codebase
+  - `setTimeout` for auto-clearing save success message: `setTimeout(() => setSaveStatus("idle"), 2000)`
+  - Pre-existing `react-hooks/set-state-in-effect` lint errors can be fixed by moving `setState` calls to "adjust state during render" pattern: track previous value in `useState`, compare during render, call `setState` conditionally
+---
