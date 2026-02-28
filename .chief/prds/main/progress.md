@@ -39,6 +39,9 @@
 - SSE tests: use `vi.resetModules()` + re-import in `beforeEach` to get fresh singleton for each test
 - React state accumulation pattern: to accumulate values from a changing prop/hook value, use "adjust state during render" with `useState` for previous-value tracking (not refs) — avoids `react-hooks/set-state-in-effect` and `react-hooks/refs` lint errors
 - Settings components go in `src/components/settings/` — presentational components that take state props and onChange callbacks
+- `enabledLanguages` semantics: empty `[]` = all enabled (default), non-empty = explicit list — consistent across DB, API, engine, and UI
+- MusicEngine `setEnabledLanguages()` controls which languages play — `scheduleNext()` skips disabled languages automatically
+- Known authors API: `GET /api/authors` returns distinct authors from commits table — requires at least one repo to have been played/cached
 
 ---
 
@@ -723,4 +726,69 @@
   - For preview sound, create a temporary synth, connect to destination, play, then dispose after timeout — avoids leaking audio nodes
   - NoiseSynth doesn't accept a pitch note — use `triggerAttackRelease("8n")` without pitch argument
   - Tone.js mock pattern in tests: use `vi.fn().mockImplementation(function Name() { return obj })` — constructor functions (not arrow functions) needed for `new`
+---
+
+## 2026-02-28 - US-041
+- Implemented `LanguageToggle` component in `src/components/settings/LanguageToggle.tsx`
+  - Checklist of all supported languages (from `LANGUAGE_SYNTH_MAP`) with toggle switches
+  - Each language row has a styled toggle switch, language color dot, and language name
+  - Empty `enabledLanguages` array = all enabled (default); explicit array = only those enabled
+  - "Enable all" button resets to empty array (disabled when already all enabled)
+  - Muted count indicator shown when languages are disabled
+  - Prevents disabling the last remaining language
+  - Disabled languages have reduced opacity styling
+  - Grid layout: 2 columns on mobile, 3 columns on sm+
+- Integrated LanguageToggle into settings page (`src/app/settings/page.tsx`):
+  - Added `enabledLanguages` state, loaded from `GET /api/settings` on mount
+  - LanguageToggle rendered between Instrument Overrides and Default Repository sections
+  - `enabledLanguages` included in `PUT /api/settings` save payload
+- Integrated language filtering into playback:
+  - Added `_enabledLanguages` field and `setEnabledLanguages()` method to MusicEngine
+  - Added `isLanguageEnabled()` private helper
+  - `scheduleNext()` skips commits whose `primaryLanguage` is not in the enabled set
+  - Exposed `setEnabledLanguages` through `useMusicEngine` hook
+  - Player page (`src/app/play/[owner]/[repo]/page.tsx`) loads settings on mount and passes `enabledLanguages` to engine
+- 17 unit tests in `LanguageToggle.test.tsx` covering: toggle rendering, all-enabled state, explicit enabled list, disabling from all-enabled, disabling from explicit list, enabling a language, enabling all resets to [], preventing last-language disable, Enable All button states, muted count display, color dots, opacity styling, singular/plural muted text
+- All 522 tests passing, typecheck and lint clean
+- Files changed: `src/components/settings/LanguageToggle.tsx` (new), `src/components/settings/LanguageToggle.test.tsx` (new), `src/app/settings/page.tsx`, `src/lib/music/engine.ts`, `src/hooks/useMusicEngine.ts`, `src/app/play/[owner]/[repo]/page.tsx`
+- **Learnings for future iterations:**
+  - `enabledLanguages: string[]` semantics: empty array `[]` = all enabled (default), non-empty = explicit list of enabled languages — consistent with DB default
+  - MusicEngine `scheduleNext()` uses a while-loop to skip disabled languages before playing the next note — simple and doesn't affect timing
+  - Settings components follow presentational pattern: take state props + onChange callback, no internal data fetching
+  - Player page loads user settings via `/api/settings` in a `useEffect` and passes `enabledLanguages` to `setEnabledLanguages` on the engine
+  - The LanguageToggle prevents disabling the last language by checking `next.length === 0` after removing — avoids silent playback
+---
+
+## 2026-02-28 - US-042
+- Implemented `MotifEditor` component in `src/components/settings/MotifEditor.tsx`
+  - Lists known authors from connected repos (fetched via new `/api/authors` endpoint)
+  - Each author has a color picker (native `<input type="color">`) with hex value display
+  - Each author has a rhythm pattern editor with visual beat buttons:
+    - Click to cycle through durations: 0.5 (Short/blue), 1 (Normal), 1.5 (Long/orange)
+    - Add beat button (+) — max 8 beats
+    - Remove beat button (×) on hover — min 2 beats
+  - "Preview" button plays the author's rhythmic motif with panned audio using Tone.js
+  - Individual "Reset" button per author restores deterministic hash-based motif
+  - "Reset all to defaults" button clears all custom motifs
+  - "Customized" badge and accent-colored name for authors with custom motifs
+  - Pan position displayed for each author
+  - Empty state when no authors found ("Play a repository to discover contributors")
+- Added `getDistinctAuthors()` function to `src/lib/db/commits.ts` — queries DISTINCT authors from commits table
+- Created `GET /api/authors` endpoint at `src/app/api/authors/route.ts` — returns known authors from cached commits (requires auth)
+- Integrated MotifEditor into settings page (`src/app/settings/page.tsx`):
+  - Added `authorMotifs` and `knownAuthors` state
+  - Loads `authorMotifs` from `GET /api/settings` on mount
+  - Loads `knownAuthors` from `GET /api/authors` on mount
+  - MotifEditor rendered between Language Toggles and Default Repository sections
+  - `authorMotifs` included in `PUT /api/settings` save payload
+- 24 unit tests in `MotifEditor.test.tsx` covering: empty state, author rows, avatar, default/custom colors, color change, rhythm beats, beat cycling, add/remove beats, max/min beat limits, customized badge, accent highlighting, preview, individual reset, reset all, pan display, preserving other motifs, hex color display
+- All 546 tests passing, typecheck clean
+- Files changed: `src/components/settings/MotifEditor.tsx` (new), `src/components/settings/MotifEditor.test.tsx` (new), `src/app/settings/page.tsx`, `src/lib/db/commits.ts`, `src/app/api/authors/route.ts` (new)
+- **Learnings for future iterations:**
+  - Native `<input type="color">` works well for color pickers — no external library needed, dark theme compatible with minimal styling
+  - Rhythm pattern editor uses click-to-cycle pattern (0.5 → 1 → 1.5 → 0.5) — simpler than a dropdown per beat
+  - Preview plays the full rhythm pattern as ascending notes with pan position applied via Tone.Panner
+  - `getDistinctAuthors()` is a simple SQL `SELECT DISTINCT author FROM commits` — efficient since author is indexed (`idx_commits_author`)
+  - Known authors come from cached commits, so the user needs to have played at least one repo before authors appear
+  - `authorMotifs` in UserSettings is `AuthorMotif[]` (not a Record) — matches the type definition
 ---

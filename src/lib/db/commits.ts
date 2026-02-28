@@ -155,6 +155,16 @@ export async function getCommitsByAuthor(author: string): Promise<Commit[]> {
   return result.rows.map(rowToCommit);
 }
 
+export async function getDistinctAuthors(): Promise<string[]> {
+  await ensureSchema();
+  const db = getDatabase();
+  const result = await db.execute({
+    sql: "SELECT DISTINCT author FROM commits ORDER BY author ASC",
+    args: [],
+  });
+  return result.rows.map((row) => row.author as string);
+}
+
 export async function deleteCommitsByRepo(repoId: string): Promise<number> {
   await ensureSchema();
   const db = getDatabase();

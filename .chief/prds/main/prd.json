@@ -675,7 +675,8 @@
         "Saved as authorMotifs in user settings"
       ],
       "priority": 42,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-043",

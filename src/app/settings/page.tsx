@@ -5,8 +5,9 @@ import Link from "next/link";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { InstrumentMapper } from "@/components/settings/InstrumentMapper";
 import { LanguageToggle } from "@/components/settings/LanguageToggle";
+import { MotifEditor } from "@/components/settings/MotifEditor";
 import { useTheme } from "@/hooks/useTheme";
-import type { UserSettings } from "@/types";
+import type { AuthorMotif, UserSettings } from "@/types";
 
 interface Repo {
   fullName: string;
@@ -25,6 +26,8 @@ export default function SettingsPage() {
   const [defaultRepo, setDefaultRepo] = useState("");
   const [instrumentOverrides, setInstrumentOverrides] = useState<Record<string, string>>({});
   const [enabledLanguages, setEnabledLanguages] = useState<string[]>([]);
+  const [authorMotifs, setAuthorMotifs] = useState<AuthorMotif[]>([]);
+  const [knownAuthors, setKnownAuthors] = useState<string[]>([]);
   const [repos, setRepos] = useState<Repo[]>([]);
   const [reposLoading, setReposLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
@@ -47,6 +50,7 @@ export default function SettingsPage() {
         setDefaultRepo(settings.defaultRepo);
         setInstrumentOverrides(settings.instrumentOverrides ?? {});
         setEnabledLanguages(settings.enabledLanguages ?? []);
+        setAuthorMotifs(settings.authorMotifs ?? []);
       } catch {
         // Settings will use defaults
       } finally {
@@ -55,6 +59,25 @@ export default function SettingsPage() {
     }
 
     loadSettings();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Load known authors from cached commits
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAuthors() {
+      try {
+        const response = await fetch("/api/authors");
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!cancelled) setKnownAuthors(data.authors);
+      } catch {
+        // Authors will be empty
+      }
+    }
+
+    loadAuthors();
     return () => { cancelled = true; };
   }, []);
 
@@ -94,6 +117,7 @@ export default function SettingsPage() {
           theme,
           instrumentOverrides,
           enabledLanguages,
+          authorMotifs,
         }),
       });
 
@@ -108,7 +132,7 @@ export default function SettingsPage() {
       setSaveStatus("error");
       setSaveError(err instanceof Error ? err.message : "Failed to save settings");
     }
-  }, [tempo, volume, defaultRepo, theme, instrumentOverrides, enabledLanguages]);
+  }, [tempo, volume, defaultRepo, theme, instrumentOverrides, enabledLanguages, authorMotifs]);
 
   if (isLoading) {
     return (
@@ -226,6 +250,15 @@ export default function SettingsPage() {
           <LanguageToggle
             enabledLanguages={enabledLanguages}
             onChange={setEnabledLanguages}
+          />
+        </div>
+
+        {/* Author Motifs Section */}
+        <div className="rounded-xl border border-border-strong bg-surface p-6">
+          <MotifEditor
+            authorMotifs={authorMotifs}
+            knownAuthors={knownAuthors}
+            onChange={setAuthorMotifs}
           />
         </div>
 
