@@ -1,18 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { getPusherClient } from "@/lib/pusher/client";
+import type { Channel } from "pusher-js";
 import type { Commit } from "@/types";
 
 interface UseLiveCommitsReturn {
-  /** The most recently received commit from the SSE stream */
+  /** The most recently received commit from Pusher */
   latestCommit: Commit | null;
-  /** Whether the SSE connection is currently active */
+  /** Whether the Pusher connection is currently active */
   isConnected: boolean;
   /** Error message if connection failed */
   error: string | null;
 }
-
-const RECONNECT_DELAY_MS = 3000;
 
 export function useLiveCommits(repo: string | null): UseLiveCommitsReturn {
   const [latestCommit, setLatestCommit] = useState<Commit | null>(null);
@@ -20,9 +20,7 @@ export function useLiveCommits(repo: string | null): UseLiveCommitsReturn {
   const [error, setError] = useState<string | null>(null);
   const [prevRepo, setPrevRepo] = useState<string | null>(repo);
 
-  const eventSourceRef = useRef<EventSource | null>(null);
-  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const unmountedRef = useRef(false);
+  const channelRef = useRef<Channel | null>(null);
 
   // Reset state during render when repo changes to null
   if (repo !== prevRepo) {
@@ -34,74 +32,58 @@ export function useLiveCommits(repo: string | null): UseLiveCommitsReturn {
     }
   }
 
-  const cleanup = useCallback(() => {
-    if (reconnectTimerRef.current !== null) {
-      clearTimeout(reconnectTimerRef.current);
-      reconnectTimerRef.current = null;
-    }
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
-    }
-  }, []);
-
   useEffect(() => {
-    unmountedRef.current = false;
-
     if (!repo) {
-      cleanup();
       return;
     }
 
-    function connect() {
-      if (unmountedRef.current) return;
+    const pusher = getPusherClient();
+    const [owner, repoName] = repo.split("/");
+    const channelName = `repo-${owner}-${repoName}`;
 
-      cleanup();
+    const channel = pusher.subscribe(channelName);
+    channelRef.current = channel;
 
-      const url = `/api/live?repo=${encodeURIComponent(repo!)}`;
-      const es = new EventSource(url);
-      eventSourceRef.current = es;
+    channel.bind("commits", (commits: Commit[]) => {
+      if (commits.length > 0) {
+        setLatestCommit(commits[commits.length - 1]);
+      }
+    });
 
-      es.addEventListener("connected", () => {
-        if (unmountedRef.current) return;
-        setIsConnected(true);
-        setError(null);
-      });
+    channel.bind("pusher:subscription_succeeded", () => {
+      setIsConnected(true);
+      setError(null);
+    });
 
-      es.addEventListener("commits", (event: MessageEvent) => {
-        if (unmountedRef.current) return;
-        try {
-          const commits: Commit[] = JSON.parse(event.data);
-          if (commits.length > 0) {
-            setLatestCommit(commits[commits.length - 1]);
-          }
-        } catch {
-          // Ignore malformed data
-        }
-      });
+    channel.bind("pusher:subscription_error", () => {
+      setIsConnected(false);
+      setError("Failed to subscribe to live updates.");
+    });
 
-      es.onerror = () => {
-        if (unmountedRef.current) return;
-        es.close();
-        eventSourceRef.current = null;
-        setIsConnected(false);
-        setError("Connection lost. Reconnecting...");
+    pusher.connection.bind("connected", () => {
+      setIsConnected(true);
+      setError(null);
+    });
 
-        // Auto-reconnect after delay
-        reconnectTimerRef.current = setTimeout(() => {
-          reconnectTimerRef.current = null;
-          connect();
-        }, RECONNECT_DELAY_MS);
-      };
-    }
+    pusher.connection.bind("error", () => {
+      setIsConnected(false);
+      setError("Connection lost. Reconnecting...");
+    });
 
-    connect();
+    pusher.connection.bind("disconnected", () => {
+      setIsConnected(false);
+      setError("Connection lost. Reconnecting...");
+    });
 
     return () => {
-      unmountedRef.current = true;
-      cleanup();
+      channel.unbind_all();
+      pusher.unsubscribe(channelName);
+      channelRef.current = null;
+      pusher.connection.unbind("connected");
+      pusher.connection.unbind("error");
+      pusher.connection.unbind("disconnected");
     };
-  }, [repo, cleanup]);
+  }, [repo]);
 
   return { latestCommit, isConnected, error };
 }
