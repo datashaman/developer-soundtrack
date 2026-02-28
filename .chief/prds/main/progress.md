@@ -17,10 +17,8 @@
 - React hook tests: use `@testing-library/react` with `renderHook`/`act`, set `// @vitest-environment jsdom` comment at top of `.test.tsx` file
 - Dev deps for hook testing: `@testing-library/react`, `jsdom`
 - Component tests with `// @vitest-environment jsdom`: add explicit `cleanup()` in `afterEach` to prevent DOM accumulation across tests
-- Database: better-sqlite3 with WAL mode, foreign keys ON; db modules in `src/lib/db/`
-- DB tests: use in-memory SQLite (`:memory:`) with `vi.mock("./index")` to inject test db
+- DB tests: use `vi.mock("./index")` to inject test db
 - JSON columns (languages, musical_params, etc.) stored as TEXT, parsed with JSON.parse/JSON.stringify
-- `pnpm.onlyBuiltDependencies` in package.json for native addons (better-sqlite3)
 - Auth: NextAuth.js v5 beta — config in `src/lib/auth.ts`, route at `src/app/api/auth/[...nextauth]/route.ts`
 - Auth: `Providers` wrapper (`SessionProvider`) in `src/components/shared/Providers.tsx`, used in root layout
 - Auth: Type augmentation for session `accessToken` in `src/types/next-auth.d.ts`
@@ -33,6 +31,9 @@
 - React `react-hooks/refs` lint rule: cannot assign `ref.current = value` during render — use `useEffect` to sync state to refs
 - Shared UI components in `src/components/shared/`: `LanguageIcon`, `CIBadge`, `DiffStats` — use these instead of inline implementations
 - `LANGUAGE_COLORS` single source of truth: import from `@/components/shared/LanguageIcon` — never duplicate the color map
+- Responsive breakpoints: mobile (<768px / `md:`), tablet (768-1024px / `lg:`), desktop (>1024px). Use `min-h-11` (44px) for touch targets on mobile
+- Three-breakpoint visibility: `hidden lg:block` (desktop-only), `hidden md:block lg:hidden` (tablet-only), `block md:hidden` (mobile-only)
+- Database: `@libsql/client` (Turso-compatible), async API; db modules in `src/lib/db/`
 
 ---
 
@@ -556,4 +557,29 @@
   - Shared components are presentational (no hooks) — makes them easy to test and reuse
   - `querySelector` returns `Element` (no `.style`), cast to `HTMLElement` in tests when checking style properties
   - Extracting shared components also simplified NowPlaying significantly — removed ~50 lines of inline CI icon and display logic
+---
+
+## 2026-02-28 - US-032
+- Implemented responsive layout across the entire application for desktop (>1024px), tablet (768-1024px), and mobile (<768px)
+- **TransportControls**: Controls stack vertically on mobile (playback buttons centered, tempo/volume below), single row on md+. All buttons have `min-h-11` (44px) touch targets on mobile, relaxed to normal sizing on md+
+- **NowPlaying**: Added `compact` prop for mobile bottom bar mode — shows author initial, message truncated, language dot, and CI badge in a single row. Full card renders on md+
+- **MobileCommitList**: New component (`src/components/player/MobileCommitList.tsx`) — vertical scrolling commit list replacing horizontal Timeline on mobile. Each item has `min-h-11` touch target
+- **Player Page**: Three-breakpoint layout:
+  - Desktop (lg+): NowPlaying above Timeline (full layout)
+  - Tablet (md to lg): Timeline first, NowPlaying stacks below it
+  - Mobile (<md): Waveform + transport at top, MobileCommitList replaces Timeline, compact NowPlaying as fixed bottom bar
+  - Added `pb-14` bottom padding on mobile to prevent content from being hidden behind fixed bottom bar
+- **LandingPage**: Responsive hero text sizing (3xl → 4xl → 5xl), smaller padding on mobile, min-h-11 on CTA button
+- **TestPlayer**: Timeline hidden on small screens (<sm), commit list items have min-h-11 touch targets
+- **Dashboard**: All interactive elements (Play button, preset buttons, date inputs, repo selector, recent sessions) have `min-h-11` touch targets
+- Header links (back arrow, settings gear) have `min-h-11 min-w-11` on mobile with `flex items-center justify-center` for proper centering
+- All 411 tests passing, typecheck clean
+- Files changed: `src/app/play/[owner]/[repo]/page.tsx`, `src/components/player/TransportControls.tsx`, `src/components/player/NowPlaying.tsx`, `src/components/player/MobileCommitList.tsx` (new), `src/components/player/TestPlayer.tsx`, `src/components/landing/LandingPage.tsx`, `src/components/dashboard/Dashboard.tsx`, `src/components/dashboard/DateRangePicker.tsx`, `src/components/dashboard/RepoSelector.tsx`
+- **Learnings for future iterations:**
+  - Tailwind `min-h-11` = 44px = Apple's recommended minimum touch target for mobile
+  - Use `md:min-h-0 md:min-w-0` to remove min-size constraints on desktop where they're not needed
+  - `hidden md:block` / `block md:hidden` pattern cleanly swaps between mobile and desktop variants of the same content
+  - For fixed bottom bars on mobile, add equivalent `pb-X` to the main content to prevent overlap
+  - NowPlaying `compact` prop keeps component reusable — same component renders full card or bottom bar based on context
+  - Three-breakpoint pattern: use `hidden lg:block` for desktop-only, `hidden md:block lg:hidden` for tablet-only, `block md:hidden` for mobile-only
 ---

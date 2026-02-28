@@ -89,3 +89,18 @@
   - `suppressHydrationWarning` on `<html>` is needed because the inline script may change the class before React hydrates
   - The `LANGUAGE_COLORS` map in LanguageIcon remains hardcoded hex values (not theme-dependent) since language colors should stay consistent across themes
 ---
+
+## 2026-02-28 - US-034
+- What was implemented: Webhook registration for live mode. Created `src/lib/github/webhooks.ts` with `registerWebhook()`, `removeWebhook()`, and `getWebhookStatus()` functions. Created API route at `/api/webhooks` with GET (check status), POST (register), and DELETE (remove) handlers. Created `LiveModeToggle` component on the player page header. Webhooks register for `push` and `check_run` events with a cryptographically generated per-repo secret. Webhook ID and secret are stored in the repos table. Custom error classes handle insufficient permissions and duplicate webhook scenarios.
+- Files changed:
+  - `src/lib/github/webhooks.ts` (created) — Core webhook registration/removal/status module with error handling
+  - `src/app/api/webhooks/route.ts` (created) — REST API for webhook management (GET/POST/DELETE)
+  - `src/components/player/LiveModeToggle.tsx` (created) — UI toggle button with pulsing live indicator
+  - `src/app/play/[owner]/[repo]/page.tsx` (updated) — Added LiveModeToggle to player header
+- **Learnings for future iterations:**
+  - The repos table already had `webhook_id` and `webhook_secret` columns from the schema, and `UpdateRepoInput` already supported them — no schema migration was needed
+  - Auth pattern: `const session = await auth(); if (!session?.accessToken)` for server-side auth checks, then `createOctokitClient(session.accessToken)` for GitHub API calls
+  - `NEXTAUTH_URL` env var is used as the base URL for webhook callback URLs
+  - GitHub returns 422 for duplicate webhook URLs on the same repo; 404/403 for insufficient permissions
+  - `randomBytes(32).toString("hex")` from `crypto` generates secure webhook secrets
+---
