@@ -38,6 +38,7 @@
 - SSE endpoint: `/api/live?repo=owner/repo` — requires auth, returns `text/event-stream` with `connected`, `commits`, and `heartbeat` events
 - SSE tests: use `vi.resetModules()` + re-import in `beforeEach` to get fresh singleton for each test
 - React state accumulation pattern: to accumulate values from a changing prop/hook value, use "adjust state during render" with `useState` for previous-value tracking (not refs) — avoids `react-hooks/set-state-in-effect` and `react-hooks/refs` lint errors
+- Settings components go in `src/components/settings/` — presentational components that take state props and onChange callbacks
 
 ---
 
@@ -694,4 +695,32 @@
   - Settings page uses `useEffect` with cancelled flag pattern for both settings and repos loading — same pattern used across the codebase
   - `setTimeout` for auto-clearing save success message: `setTimeout(() => setSaveStatus("idle"), 2000)`
   - Pre-existing `react-hooks/set-state-in-effect` lint errors can be fixed by moving `setState` calls to "adjust state during render" pattern: track previous value in `useState`, compare during render, call `setState` conditionally
+---
+
+## 2026-02-28 - US-040
+- Implemented `InstrumentMapper` component in `src/components/settings/InstrumentMapper.tsx`
+  - Table of language → instrument dropdown for each language in `LANGUAGE_SYNTH_MAP`
+  - Each row shows language color dot, language name, synth type dropdown, and Preview button
+  - Dropdown options show "(default)" suffix for the default synth type of each language
+  - Overridden languages highlighted with accent color in the language name
+  - "Preview" button plays a sample C4 note (8n duration) using the selected synth via Tone.js
+  - Preview creates a temporary synth, connects to destination, plays note, and disposes after 1 second
+  - "Reset to defaults" button clears all overrides (disabled when no overrides)
+  - NoiseSynth preview uses `triggerAttackRelease("8n")` (no pitch); MetalSynth and others use `triggerAttackRelease("C4", "8n")`
+  - When selecting the default synth type, the override is removed from the map (not stored as an explicit override)
+- Integrated InstrumentMapper into settings page (`src/app/settings/page.tsx`):
+  - Added `instrumentOverrides` state, loaded from `GET /api/settings` on mount
+  - InstrumentMapper rendered between Playback and Default Repository sections
+  - `instrumentOverrides` included in `PUT /api/settings` save payload
+- 16 unit tests in `InstrumentMapper.test.tsx` covering: row rendering, language names, default synth selection, override display, onChange callbacks (add/remove/preserve), preview button, reset button (disabled/enabled/clear), dropdown options, default suffix, accent highlighting, synth type options, language color dots
+- All 505 tests passing, typecheck and lint clean
+- Files changed: `src/components/settings/InstrumentMapper.tsx` (new), `src/components/settings/InstrumentMapper.test.tsx` (new), `src/app/settings/page.tsx`
+- **Learnings for future iterations:**
+  - Settings components go in `src/components/settings/` — first components in this directory
+  - `LANGUAGE_SYNTH_MAP` from `src/lib/music/synths.ts` is the canonical list of supported languages — iterate its keys for the instrument mapper rows
+  - `SynthType` from `src/lib/music/synths.ts` defines valid synth types — use for dropdown options
+  - Instrument overrides stored as `Record<string, string>` (language → SynthType) — only non-default overrides are stored
+  - For preview sound, create a temporary synth, connect to destination, play, then dispose after timeout — avoids leaking audio nodes
+  - NoiseSynth doesn't accept a pitch note — use `triggerAttackRelease("8n")` without pitch argument
+  - Tone.js mock pattern in tests: use `vi.fn().mockImplementation(function Name() { return obj })` — constructor functions (not arrow functions) needed for `new`
 ---

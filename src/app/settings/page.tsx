@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
+import { InstrumentMapper } from "@/components/settings/InstrumentMapper";
 import { useTheme } from "@/hooks/useTheme";
 import type { UserSettings } from "@/types";
 
@@ -21,6 +22,7 @@ export default function SettingsPage() {
   const [tempo, setTempo] = useState(1.0);
   const [volume, setVolume] = useState(80);
   const [defaultRepo, setDefaultRepo] = useState("");
+  const [instrumentOverrides, setInstrumentOverrides] = useState<Record<string, string>>({});
   const [repos, setRepos] = useState<Repo[]>([]);
   const [reposLoading, setReposLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,6 +43,7 @@ export default function SettingsPage() {
         setTempo(settings.defaultTempo);
         setVolume(Math.round(settings.volume * 100));
         setDefaultRepo(settings.defaultRepo);
+        setInstrumentOverrides(settings.instrumentOverrides ?? {});
       } catch {
         // Settings will use defaults
       } finally {
@@ -86,6 +89,7 @@ export default function SettingsPage() {
           volume: volume / 100,
           defaultRepo,
           theme,
+          instrumentOverrides,
         }),
       });
 
@@ -100,7 +104,7 @@ export default function SettingsPage() {
       setSaveStatus("error");
       setSaveError(err instanceof Error ? err.message : "Failed to save settings");
     }
-  }, [tempo, volume, defaultRepo, theme]);
+  }, [tempo, volume, defaultRepo, theme, instrumentOverrides]);
 
   if (isLoading) {
     return (
@@ -203,6 +207,14 @@ export default function SettingsPage() {
               </span>
             </div>
           </div>
+        </div>
+
+        {/* Instrument Overrides Section */}
+        <div className="rounded-xl border border-border-strong bg-surface p-6">
+          <InstrumentMapper
+            overrides={instrumentOverrides}
+            onChange={setInstrumentOverrides}
+          />
         </div>
 
         {/* Default Repository Section */}
