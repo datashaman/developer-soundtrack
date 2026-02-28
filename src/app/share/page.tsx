@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useMusicEngine } from "@/hooks/useMusicEngine";
@@ -23,7 +23,7 @@ function formatDateRange(from: string | null, to: string | null): string {
   return "All time";
 }
 
-export default function SharePage() {
+function SharePageContent() {
   const searchParams = useSearchParams();
   const repo = searchParams.get("repo");
   const from = searchParams.get("from");
@@ -265,5 +265,20 @@ export default function SharePage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function SharePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center gap-4 p-4">
+          <div className="h-8 w-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-text-faint font-mono">Loading...</p>
+        </div>
+      }
+    >
+      <SharePageContent />
+    </Suspense>
   );
 }
