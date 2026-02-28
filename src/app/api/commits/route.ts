@@ -60,6 +60,7 @@ export async function GET(request: NextRequest) {
       total: result.total,
       page: result.page,
       hasMore: result.hasMore,
+      rateLimitRemaining: result.rateLimitRemaining,
     });
   } catch (error: unknown) {
     const message =

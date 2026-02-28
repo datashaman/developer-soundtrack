@@ -38,7 +38,7 @@ export default function PlayerPage() {
   const to = searchParams.get("to");
   const range = searchParams.get("range");
 
-  const { commits, isLoading, error } = useCommits({
+  const { commits, isLoading, error, rateLimitRemaining, retry } = useCommits({
     repo: fullName,
     from: from ?? undefined,
     to: to ?? undefined,
@@ -48,6 +48,7 @@ export default function PlayerPage() {
     isPlaying,
     currentCommit,
     currentIndex,
+    audioError,
     play,
     pause,
     resume,
@@ -171,6 +172,29 @@ export default function PlayerPage() {
         {error && (
           <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-6 text-center">
             <p className="text-sm text-red-400 font-mono">{error}</p>
+            <button
+              onClick={retry}
+              className="mt-3 text-sm text-accent hover:text-accent-hover font-mono underline"
+            >
+              Try again
+            </button>
+          </div>
+        )}
+
+        {/* Rate limit warning */}
+        {rateLimitRemaining !== null && rateLimitRemaining < 100 && (
+          <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-4 mb-4 text-center">
+            <p className="text-sm text-yellow-400 font-mono">
+              GitHub API rate limit is low: {rateLimitRemaining} calls remaining.
+              Data may be served from cache.
+            </p>
+          </div>
+        )}
+
+        {/* Audio error */}
+        {audioError && (
+          <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 mb-4 text-center">
+            <p className="text-sm text-red-400 font-mono">{audioError}</p>
           </div>
         )}
 

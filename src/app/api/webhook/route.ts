@@ -8,7 +8,7 @@ import {
   type FileChange,
 } from "@/lib/github/languages";
 import { commitToMusicalParams } from "@/lib/music/mapping";
-import { sseEventBus } from "@/lib/sse/event-bus";
+import { getPusher } from "@/lib/pusher/server";
 import type { Commit, CIStatus } from "@/types";
 
 /**
@@ -196,9 +196,10 @@ export async function POST(request: NextRequest) {
   // Store in SQLite
   await createCommits(commits);
 
-  // Broadcast to connected SSE clients for this repo
-  const repoFullName = payload.repository.full_name;
-  sseEventBus.broadcast(repoFullName, commits);
+  // Broadcast to Pusher channel for this repo
+  const [repoOwner, repoName] = payload.repository.full_name.split("/");
+  const channel = `repo-${repoOwner}-${repoName}`;
+  await getPusher().trigger(channel, "commits", commits);
 
   return NextResponse.json({
     message: "Webhook processed successfully",

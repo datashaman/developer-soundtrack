@@ -13,6 +13,11 @@ vi.mock("@/lib/db/commits", () => ({
   createCommits: (...args: unknown[]) => mockedCreateCommits(...args),
 }));
 
+const mockedTrigger = vi.fn().mockResolvedValue(undefined);
+vi.mock("@/lib/pusher/server", () => ({
+  getPusher: () => ({ trigger: mockedTrigger }),
+}));
+
 const WEBHOOK_SECRET = "test-secret-abc123";
 
 function sign(payload: string, secret: string = WEBHOOK_SECRET): string {
@@ -334,5 +339,27 @@ describe("POST /api/webhook", () => {
     expect(mockedGetRepoByFullName).toHaveBeenCalledWith(
       "octocat/hello-world",
     );
+  });
+
+  it("triggers Pusher with correct channel and commits", async () => {
+    const payload = JSON.stringify(makePushPayload());
+    const req = makeWebhookRequest(payload);
+    await POST(req);
+
+    expect(mockedTrigger).toHaveBeenCalledTimes(1);
+    expect(mockedTrigger).toHaveBeenCalledWith(
+      "repo-octocat-hello-world",
+      "commits",
+      expect.arrayContaining([
+        expect.objectContaining({ id: "abc123def456" }),
+      ]),
+    );
+  });
+
+  it("does not trigger Pusher when there are no commits", async () => {
+    const payload = JSON.stringify(makePushPayload({ commits: [] }));
+    const req = makeWebhookRequest(payload);
+    await POST(req);
+    expect(mockedTrigger).not.toHaveBeenCalled();
   });
 });

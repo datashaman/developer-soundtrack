@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface Repo {
   fullName: string;
@@ -19,42 +19,51 @@ export function RepoSelector({ value, onChange }: RepoSelectorProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  const fetchRepos = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
 
-    async function fetchRepos() {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await fetch("/api/repos");
-        if (!response.ok) {
-          const body = await response.json().catch(() => ({}));
-          throw new Error(body.error || `Failed to fetch repos (${response.status})`);
-        }
-        const data = await response.json();
-        if (!cancelled) {
-          setRepos(data.repos);
-        }
-      } catch (err: unknown) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to fetch repositories");
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
+    try {
+      const response = await fetch("/api/repos");
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || `Failed to fetch repos (${response.status})`);
       }
+      const data = await response.json();
+      setRepos(data.repos);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to fetch repositories");
+    } finally {
+      setIsLoading(false);
     }
-
-    fetchRepos();
-    return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    fetchRepos();
+  }, [fetchRepos]);
 
   if (error) {
     return (
-      <div className="text-red-400 text-sm">
-        Failed to load repositories: {error}
+      <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-4">
+        <p className="text-red-400 text-sm font-mono">
+          Failed to load repositories: {error}
+        </p>
+        <button
+          onClick={fetchRepos}
+          className="mt-2 text-sm text-accent hover:text-accent-hover font-mono underline"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+
+  if (!isLoading && repos.length === 0) {
+    return (
+      <div className="rounded-lg border border-border-subtle bg-surface p-4 text-center">
+        <p className="text-sm text-text-faint font-mono">
+          No repositories found. Connect a repository to get started.
+        </p>
       </div>
     );
   }

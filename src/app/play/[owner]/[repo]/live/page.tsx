@@ -23,6 +23,7 @@ export default function LivePlayerPage() {
   const {
     isPlaying,
     currentCommit,
+    audioError,
     play,
     setVolume,
     getWaveformData,
@@ -82,11 +83,17 @@ export default function LivePlayerPage() {
               </h1>
               {/* Pulsing dot indicator for live mode */}
               <span className="relative flex h-2.5 w-2.5 shrink-0" data-testid="live-indicator">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent" />
+                {isConnected ? (
+                  <>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent" />
+                  </>
+                ) : (
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-yellow-500" />
+                )}
               </span>
-              <span className="text-xs font-mono text-accent uppercase tracking-wider">
-                Live
+              <span className={`text-xs font-mono uppercase tracking-wider ${isConnected ? "text-accent" : "text-yellow-500"}`}>
+                {isConnected ? "Live" : "Reconnecting"}
               </span>
             </div>
             <p className="text-xs text-text-faint font-mono">
@@ -142,6 +149,16 @@ export default function LivePlayerPage() {
         {error && (
           <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-4 mb-4 text-center">
             <p className="text-sm text-yellow-400 font-mono">{error}</p>
+            <p className="text-xs text-yellow-400/60 font-mono mt-1">
+              Auto-reconnecting... Live events will resume when connection is restored.
+            </p>
+          </div>
+        )}
+
+        {/* Audio error */}
+        {audioError && (
+          <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 mb-4 text-center">
+            <p className="text-sm text-red-400 font-mono">{audioError}</p>
           </div>
         )}
 

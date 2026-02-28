@@ -54,6 +54,7 @@ export interface CachedCommitsResult {
   page: number;
   hasMore: boolean;
   fromCache: boolean;
+  rateLimitRemaining: number | null;
 }
 
 /**
@@ -78,13 +79,14 @@ export async function getCachedCommits(
       limit,
     });
     const hasMore = page * limit < total;
-    return { commits, total, page, hasMore, fromCache: true };
+    return { commits, total, page, hasMore, fromCache: true, rateLimitRemaining: null };
   }
 
   // Cache miss or stale — fetch from GitHub
   const allCommits: Commit[] = [];
   let currentPage = 1;
   let hasMorePages = true;
+  let rateLimitRemaining: number | null = null;
 
   while (hasMorePages) {
     const result = await fetchCommits(octokit, {
@@ -98,6 +100,7 @@ export async function getCachedCommits(
 
     allCommits.push(...result.commits);
     hasMorePages = result.hasMore;
+    rateLimitRemaining = result.rateLimitRemaining;
     currentPage++;
   }
 
@@ -132,5 +135,5 @@ export async function getCachedCommits(
   });
   const hasMore = page * limit < total;
 
-  return { commits, total, page, hasMore, fromCache: false };
+  return { commits, total, page, hasMore, fromCache: false, rateLimitRemaining };
 }

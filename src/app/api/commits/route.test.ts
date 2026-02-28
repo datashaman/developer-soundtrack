@@ -148,6 +148,7 @@ describe("GET /api/commits", () => {
       page: 1,
       hasMore: false,
       fromCache: true,
+      rateLimitRemaining: null,
     };
     mockedGetCachedCommits.mockResolvedValue(mockResult);
 
@@ -172,6 +173,7 @@ describe("GET /api/commits", () => {
       page: 2,
       hasMore: false,
       fromCache: false,
+      rateLimitRemaining: null,
     });
 
     await GET(
@@ -198,6 +200,7 @@ describe("GET /api/commits", () => {
       page: 1,
       hasMore: false,
       fromCache: false,
+      rateLimitRemaining: null,
     });
 
     await GET(makeRequest("/api/commits?repo=user/repo"));
@@ -213,6 +216,7 @@ describe("GET /api/commits", () => {
       page: 1,
       hasMore: false,
       fromCache: false,
+      rateLimitRemaining: null,
     });
 
     const response = await GET(makeRequest("/api/commits?repo=user/repo"));
@@ -232,6 +236,7 @@ describe("GET /api/commits", () => {
       page: 1,
       hasMore: true,
       fromCache: true,
+      rateLimitRemaining: null,
     });
 
     const response = await GET(makeRequest("/api/commits?repo=user/repo"));
@@ -274,6 +279,7 @@ describe("GET /api/commits", () => {
       page: 1,
       hasMore: false,
       fromCache: false,
+      rateLimitRemaining: null,
     });
 
     await GET(makeRequest("/api/commits?repo=user/repo"));

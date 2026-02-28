@@ -13,6 +13,8 @@ interface UseMusicEngineReturn {
   currentIndex: number;
   /** Playback progress from 0 to 1 */
   progress: number;
+  /** Audio initialization or playback error message */
+  audioError: string | null;
 
   /** Begin sequential playback of commits */
   play: (commits: Commit[], startIndex?: number) => Promise<void>;
@@ -42,6 +44,7 @@ export function useMusicEngine(): UseMusicEngineReturn {
   const [currentCommit, setCurrentCommit] = useState<Commit | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [commitCount, setCommitCount] = useState(0);
+  const [audioError, setAudioError] = useState<string | null>(null);
   const initializedRef = useRef(false);
   const engineRef = useRef<MusicEngine | null>(null);
 
@@ -77,6 +80,7 @@ export function useMusicEngine(): UseMusicEngineReturn {
 
     engine.onError = (error: Error) => {
       console.error("MusicEngine error:", error);
+      setAudioError(error.message);
       setIsPlaying(false);
     };
 
@@ -92,12 +96,23 @@ export function useMusicEngine(): UseMusicEngineReturn {
 
   const play = useCallback(
     async (commits: Commit[], startIndex?: number) => {
-      await ensureInitialized();
-      const engine = getEngine();
-      setCommitCount(commits.length);
-      setIsPlaying(true);
-      setCurrentIndex(startIndex ?? 0);
-      engine.play(commits, startIndex);
+      try {
+        setAudioError(null);
+        await ensureInitialized();
+        const engine = getEngine();
+        setCommitCount(commits.length);
+        setIsPlaying(true);
+        setCurrentIndex(startIndex ?? 0);
+        engine.play(commits, startIndex);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to initialize audio";
+        setAudioError(
+          message.includes("AudioContext") || message.includes("audio") || message.includes("Tone")
+            ? "Your browser doesn't support Web Audio. Please try a modern browser like Chrome, Firefox, or Safari."
+            : message
+        );
+        setIsPlaying(false);
+      }
     },
     [ensureInitialized, getEngine]
   );
@@ -162,6 +177,7 @@ export function useMusicEngine(): UseMusicEngineReturn {
     currentCommit,
     currentIndex,
     progress,
+    audioError,
     play,
     pause,
     resume,
