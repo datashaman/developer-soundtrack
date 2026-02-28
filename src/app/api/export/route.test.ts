@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextRequest } from "next/server";
 import { POST } from "./route";
 
 vi.mock("@/lib/db/commits", () => ({
@@ -7,8 +8,8 @@ vi.mock("@/lib/db/commits", () => ({
 
 import { getCommitsByIds } from "@/lib/db/commits";
 
-function makeRequest(body: unknown) {
-  return new Request("http://localhost/api/export", {
+function makeRequest(body: unknown): NextRequest {
+  return new NextRequest("http://localhost/api/export", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

@@ -771,7 +771,8 @@
         "Shared page shows a \"Sign up to create your own\" CTA"
       ],
       "priority": 48,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-049",

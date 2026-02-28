@@ -72,6 +72,7 @@ export default function PlayerPage() {
 
   const [exportProgress, setExportProgress] = useState<number | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
 
   // Load enabled languages from user settings
   useEffect(() => {
@@ -143,6 +144,26 @@ export default function PlayerPage() {
     }
   }, [sampleEvery, stop]);
 
+  const handleShare = useCallback(async () => {
+    if (displayCommits.length === 0) return;
+    const params = new URLSearchParams();
+    params.set("repo", fullName);
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
+    if (range) params.set("range", range);
+    params.set("tempo", String(getTempo()));
+    params.set("volume", String(getVolume()));
+    const url = `${typeof window !== "undefined" ? window.location.origin : ""}/share?${params.toString()}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    } catch {
+      // fallback: open in new tab so user can copy manually
+      window.open(url, "_blank");
+    }
+  }, [displayCommits.length, fullName, from, to, range, getTempo, getVolume]);
+
   const handleExport = useCallback(async () => {
     if (displayCommits.length === 0) return;
     setExportError(null);
@@ -194,8 +215,30 @@ export default function PlayerPage() {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {displayCommits.length > 0 && (
-            <button
-              onClick={handleExport}
+            <>
+              <button
+                onClick={handleShare}
+                className="min-h-11 px-3 rounded-lg bg-accent/10 border border-accent/30 text-accent hover:bg-accent/20 hover:border-accent/50 font-mono text-sm transition-colors flex items-center gap-2"
+                aria-label="Share link"
+              >
+                {shareCopied ? (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
+                    </svg>
+                    Share
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleExport}
               disabled={exportProgress !== null}
               className="min-h-11 px-3 rounded-lg bg-accent/10 border border-accent/30 text-accent hover:bg-accent/20 hover:border-accent/50 font-mono text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
               aria-label="Export to WAV"
@@ -214,6 +257,7 @@ export default function PlayerPage() {
                 </>
               )}
             </button>
+            </>
           )}
           <LiveModeToggle owner={owner} repo={repo} />
           <Link

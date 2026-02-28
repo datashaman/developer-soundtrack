@@ -924,3 +924,17 @@
   - WAV encoding: 44-byte header (RIFF, fmt, data chunks) + interleaved 16-bit PCM; AudioBuffer.getChannelData(0/1) for stereo
   - ToneAudioBuffer from Offline may have .get() returning underlying AudioBuffer — check at runtime
 ---
+
+## 2026-02-28 - US-048
+- Implemented shareable public links (stretch goal)
+  - **Share button** on player page: builds public URL with repo, from, to, range, tempo, volume; copies to clipboard via navigator.clipboard.writeText; shows "Copied!" feedback for 2s; fallback opens URL in new tab if clipboard fails
+  - **Public share page** (`/share`): reads query params (repo, from, to, tempo, volume); fetches from GET /api/share (no auth); renders full player (waveform, transport, now-playing, timeline, instrument legend); applies tempo/volume from URL to engine
+  - **API route** GET `/api/share?repo=owner/repo&from=&to=`: no auth required; returns cached commits from DB; 404 if repo not in cache or no commits in range; 500 limit for shared links
+  - **Sign up CTA**: shared page shows "Sign up to create your own" with AuthButton (Connect with GitHub)
+  - AuthButton: added optional className prop for styling
+- Shared links only work for repos/dates that have been cached (previously played by an authenticated user)
+- Files changed: `src/app/api/share/route.ts` (new), `src/app/api/share/route.test.ts` (new), `src/app/share/page.tsx` (new), `src/app/share/layout.tsx` (new), `src/app/play/[owner]/[repo]/page.tsx`, `src/components/shared/AuthButton.tsx`, `src/app/api/export/route.test.ts` (NextRequest fix)
+- **Learnings for future iterations:**
+  - URLSearchParams requires string values — { repo: null } throws; use repoVal after null check
+  - getRepoByFullName returns repo by full_name; repo.id used for getCommitsByRepo (repo_id in commits table)
+---
