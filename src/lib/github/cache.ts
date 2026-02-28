@@ -15,6 +15,7 @@ const RECENT_DATA_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 hours
  * Determine if cached data for a repo is stale and needs refreshing.
  *
  * - If we've never fetched, it's stale.
+ * - If the requested date range extends beyond what we cached, it's stale.
  * - If the query includes recent data (within the last 24 hours), data is stale
  *   after 5 minutes.
  * - If the query only covers historical data (older than 24 hours), cache permanently.
@@ -22,6 +23,9 @@ const RECENT_DATA_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 hours
 export function isCacheStale(
   lastFetchedAt: string | null,
   queryTo?: string,
+  queryFrom?: string,
+  cachedFrom?: string | null,
+  cachedTo?: string | null,
 ): boolean {
   if (!lastFetchedAt) return true;
 
@@ -29,6 +33,7 @@ export function isCacheStale(
   const now = Date.now();
 
   // If the query's "to" date is older than 24 hours, the data is historical — cache permanently
+  // (skip range checks; historical data won't change)
   if (queryTo) {
     const toTime = new Date(queryTo).getTime();
     if (now - toTime > RECENT_DATA_THRESHOLD_MS) {
@@ -36,9 +41,26 @@ export function isCacheStale(
     }
   }
 
+  // Requested range extends beyond what we cached — must re-fetch
+  if (queryFrom !== undefined && cachedFrom != null) {
+    if (queryFrom < cachedFrom) return true;
+  }
+  if (queryTo !== undefined && cachedTo != null) {
+    if (queryTo > cachedTo) return true;
+  }
+
+  // No cached range info (legacy) — if a range is requested, re-fetch to avoid serving partial data
+  if (
+    (queryFrom !== undefined || queryTo !== undefined) &&
+    (cachedFrom == null || cachedTo == null)
+  ) {
+    return true;
+  }
+
   // Recent data: stale after 5 minutes
   return now - fetchedTime > STALE_THRESHOLD_MS;
 }
+
 
 export interface CachedCommitsOptions {
   repo: string; // "owner/repo" format
@@ -70,7 +92,16 @@ export async function getCachedCommits(
 
   const repoRow = await getRepoByFullName(repo);
 
-  if (repoRow && !isCacheStale(repoRow.last_fetched_at, to)) {
+  if (
+    repoRow &&
+    !isCacheStale(
+      repoRow.last_fetched_at,
+      to,
+      from,
+      repoRow.last_fetched_from,
+      repoRow.last_fetched_to,
+    )
+  ) {
     // Cache hit — return from database
     const { commits, total } = await getCommitsByRepo(repoRow.id, {
       from,
@@ -121,9 +152,11 @@ export async function getCachedCommits(
     await createCommits(allCommits);
   }
 
-  // Update last_fetched_at
+  // Update last_fetched_at and the range we fetched
   await updateRepo(repoId, {
     lastFetchedAt: new Date().toISOString(),
+    lastFetchedFrom: from ?? null,
+    lastFetchedTo: to ?? null,
   });
 
   // Return the requested page from the fresh data

@@ -11,6 +11,8 @@ export async function initializeSchema(client: Client): Promise<void> {
       webhook_id TEXT,
       webhook_secret TEXT,
       last_fetched_at TEXT,
+      last_fetched_from TEXT,
+      last_fetched_to TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -37,7 +39,19 @@ export async function initializeSchema(client: Client): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_commits_author
       ON commits(author);
+  `);
 
+  // Migration: add last_fetched_from/to for existing repos (ignore if columns exist)
+  const info = await client.execute("PRAGMA table_info(repos)");
+  const columns = (info.rows as { name: string }[]).map((r) => r.name);
+  if (!columns.includes("last_fetched_from")) {
+    await client.execute("ALTER TABLE repos ADD COLUMN last_fetched_from TEXT");
+  }
+  if (!columns.includes("last_fetched_to")) {
+    await client.execute("ALTER TABLE repos ADD COLUMN last_fetched_to TEXT");
+  }
+
+  await client.executeMultiple(`
     CREATE TABLE IF NOT EXISTS user_settings (
       user_id TEXT PRIMARY KEY,
       default_tempo REAL NOT NULL DEFAULT 1.0,

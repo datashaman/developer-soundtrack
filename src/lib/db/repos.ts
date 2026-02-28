@@ -10,6 +10,8 @@ export interface RepoRow {
   webhook_id: string | null;
   webhook_secret: string | null;
   last_fetched_at: string | null;
+  last_fetched_from: string | null;
+  last_fetched_to: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -29,6 +31,8 @@ export interface UpdateRepoInput {
   webhookId?: string | null;
   webhookSecret?: string | null;
   lastFetchedAt?: string | null;
+  lastFetchedFrom?: string | null;
+  lastFetchedTo?: string | null;
 }
 
 function rowToRepo(row: Row): RepoRow {
@@ -41,6 +45,8 @@ function rowToRepo(row: Row): RepoRow {
     webhook_id: row.webhook_id as string | null,
     webhook_secret: row.webhook_secret as string | null,
     last_fetched_at: row.last_fetched_at as string | null,
+    last_fetched_from: row.last_fetched_from as string | null,
+    last_fetched_to: row.last_fetched_to as string | null,
     created_at: row.created_at as string,
     updated_at: row.updated_at as string,
   };
@@ -119,6 +125,14 @@ export async function updateRepo(id: string, input: UpdateRepoInput): Promise<Re
   if (input.lastFetchedAt !== undefined) {
     fields.push("last_fetched_at = ?");
     values.push(input.lastFetchedAt ?? null);
+  }
+  if (input.lastFetchedFrom !== undefined) {
+    fields.push("last_fetched_from = ?");
+    values.push(input.lastFetchedFrom ?? null);
+  }
+  if (input.lastFetchedTo !== undefined) {
+    fields.push("last_fetched_to = ?");
+    values.push(input.lastFetchedTo ?? null);
   }
 
   if (fields.length === 0) return getRepoById(id);

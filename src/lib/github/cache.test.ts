@@ -85,10 +85,12 @@ describe("isCacheStale", () => {
     expect(isCacheStale(old, recentTo)).toBe(true);
   });
 
-  it("returns false for recent data range with fresh fetch", () => {
+  it("returns false for recent data range with fresh fetch when cached range covers request", () => {
     const fresh = new Date(Date.now() - 60_000).toISOString(); // 1 min ago
     const recentTo = new Date().toISOString();
-    expect(isCacheStale(fresh, recentTo)).toBe(false);
+    const recentFrom = new Date(Date.now() - 7 * 24 * 60 * 60_000).toISOString(); // 7 days ago
+    // Cached range covers the request
+    expect(isCacheStale(fresh, recentTo, recentFrom, recentFrom, recentTo)).toBe(false);
   });
 
   it("treats exactly 5 minutes as stale", () => {
@@ -114,6 +116,8 @@ describe("getCachedCommits", () => {
       webhook_id: null,
       webhook_secret: null,
       last_fetched_at: new Date(Date.now() - 60_000).toISOString(), // 1 min ago
+      last_fetched_from: null,
+      last_fetched_to: null,
       created_at: "2025-01-01T00:00:00Z",
       updated_at: "2025-01-01T00:00:00Z",
     });
@@ -152,6 +156,8 @@ describe("getCachedCommits", () => {
     expect(createCommits).toHaveBeenCalledWith(commits);
     expect(updateRepo).toHaveBeenCalledWith("owner/repo", {
       lastFetchedAt: expect.any(String),
+      lastFetchedFrom: null,
+      lastFetchedTo: null,
     });
   });
 
@@ -165,6 +171,8 @@ describe("getCachedCommits", () => {
       webhook_id: null,
       webhook_secret: null,
       last_fetched_at: new Date(Date.now() - 10 * 60_000).toISOString(), // 10 min ago
+      last_fetched_from: null,
+      last_fetched_to: null,
       created_at: "2025-01-01T00:00:00Z",
       updated_at: "2025-01-01T00:00:00Z",
     });
@@ -188,6 +196,8 @@ describe("getCachedCommits", () => {
     expect(createRepo).not.toHaveBeenCalled();
     expect(updateRepo).toHaveBeenCalledWith("owner/repo", {
       lastFetchedAt: expect.any(String),
+      lastFetchedFrom: null,
+      lastFetchedTo: null,
     });
   });
 
@@ -201,6 +211,8 @@ describe("getCachedCommits", () => {
       webhook_id: null,
       webhook_secret: null,
       last_fetched_at: new Date(Date.now() - 60 * 60_000).toISOString(), // 1 hour ago
+      last_fetched_from: null,
+      last_fetched_to: null,
       created_at: "2025-01-01T00:00:00Z",
       updated_at: "2025-01-01T00:00:00Z",
     });
@@ -296,6 +308,8 @@ describe("getCachedCommits", () => {
       webhook_id: null,
       webhook_secret: null,
       last_fetched_at: new Date(Date.now() - 60_000).toISOString(),
+      last_fetched_from: null,
+      last_fetched_to: null,
       created_at: "2025-01-01T00:00:00Z",
       updated_at: "2025-01-01T00:00:00Z",
     });
@@ -331,6 +345,8 @@ describe("getCachedCommits", () => {
       webhook_id: null,
       webhook_secret: null,
       last_fetched_at: new Date(Date.now() - 60_000).toISOString(),
+      last_fetched_from: null,
+      last_fetched_to: null,
       created_at: "2025-01-01T00:00:00Z",
       updated_at: "2025-01-01T00:00:00Z",
     });
@@ -356,6 +372,8 @@ describe("getCachedCommits", () => {
       webhook_id: null,
       webhook_secret: null,
       last_fetched_at: new Date(Date.now() - 60_000).toISOString(),
+      last_fetched_from: "2025-03-01T00:00:00Z",
+      last_fetched_to: "2025-03-10T00:00:00Z",
       created_at: "2025-01-01T00:00:00Z",
       updated_at: "2025-01-01T00:00:00Z",
     });
@@ -375,5 +393,56 @@ describe("getCachedCommits", () => {
       page: 2,
       limit: 50,
     });
+  });
+
+  it("re-fetches when requested range extends beyond cached range", async () => {
+    // Cached: Feb 24-28. Request: Feb 16-28 (wider) -> must re-fetch
+    const now = new Date();
+    const cachedFrom = new Date(now);
+    cachedFrom.setDate(cachedFrom.getDate() - 4);
+    cachedFrom.setHours(0, 0, 0, 0);
+    const cachedTo = new Date(now);
+    const requestedFrom = new Date(now);
+    requestedFrom.setDate(requestedFrom.getDate() - 12);
+    requestedFrom.setHours(0, 0, 0, 0);
+
+    vi.mocked(getRepoByFullName).mockResolvedValue({
+      id: "owner/repo",
+      full_name: "owner/repo",
+      description: null,
+      default_branch: "main",
+      language: null,
+      webhook_id: null,
+      webhook_secret: null,
+      last_fetched_at: new Date(Date.now() - 60_000).toISOString(), // 1 min ago - fresh
+      last_fetched_from: cachedFrom.toISOString(),
+      last_fetched_to: cachedTo.toISOString(),
+      created_at: "2025-01-01T00:00:00Z",
+      updated_at: "2025-01-01T00:00:00Z",
+    });
+    vi.mocked(fetchCommits).mockResolvedValue({
+      commits: [makeCommit(), makeCommit({ id: "sha2" })],
+      hasMore: false,
+      rateLimitRemaining: 4999,
+    });
+    vi.mocked(getCommitsByRepo).mockResolvedValue({
+      commits: [makeCommit(), makeCommit({ id: "sha2" })],
+      total: 2,
+    });
+
+    const result = await getCachedCommits(mockOctokit, {
+      repo: "owner/repo",
+      from: requestedFrom.toISOString(), // earlier than cached
+      to: cachedTo.toISOString(),
+    });
+
+    expect(result.fromCache).toBe(false);
+    expect(fetchCommits).toHaveBeenCalledWith(
+      mockOctokit,
+      expect.objectContaining({
+        since: requestedFrom.toISOString(),
+        until: cachedTo.toISOString(),
+      }),
+    );
   });
 });
