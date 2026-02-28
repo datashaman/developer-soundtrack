@@ -692,7 +692,8 @@
         "Unit tests for each preset and edge cases (e.g., Monday itself)"
       ],
       "priority": 43,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-044",

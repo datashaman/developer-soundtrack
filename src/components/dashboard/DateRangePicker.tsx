@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import type { DatePreset } from "@/lib/utils/time";
 
-export type DatePreset = "today" | "week" | "sprint" | "custom";
+export type { DatePreset } from "@/lib/utils/time";
 
 interface DateRangePickerProps {
   preset: DatePreset;

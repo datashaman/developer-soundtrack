@@ -792,3 +792,27 @@
   - Known authors come from cached commits, so the user needs to have played at least one repo before authors appear
   - `authorMotifs` in UserSettings is `AuthorMotif[]` (not a Record) — matches the type definition
 ---
+
+## 2026-02-28 - US-043
+- Created `src/lib/utils/time.ts` with `getDateRange()` function and `DatePreset` type
+  - `getDateRange(preset, customFrom?, customTo?)` returns `{ from: string, to: string }` in ISO 8601
+  - "today" = midnight today (local time) to now
+  - "week" = Monday of current week to now
+  - "sprint" = 14 days ago (midnight) to now
+  - "custom" = uses provided from/to dates (to gets end-of-day T23:59:59)
+- Refactored `Dashboard.tsx` to import `getDateRange` from shared utility instead of inline definition
+- Updated `DateRangePicker.tsx` to re-export `DatePreset` from `@/lib/utils/time` instead of defining it locally
+- 22 unit tests in `src/lib/utils/time.test.ts` covering:
+  - "today": midnight to now, ISO format, from < to, midnight edge case
+  - "week": Wednesday, Monday-itself, Sunday, Saturday, month boundary crossing, midnight start
+  - "sprint": 14 days back, month boundary, year boundary, midnight start
+  - "custom": both dates, missing from, empty from, missing to, empty to, end-of-day for to
+  - General: all presets return ISO 8601, from <= to for non-custom
+- All 568 tests passing, typecheck clean
+- Files changed: `src/lib/utils/time.ts` (new), `src/lib/utils/time.test.ts` (new), `src/components/dashboard/Dashboard.tsx`, `src/components/dashboard/DateRangePicker.tsx`, `.chief/prds/main/prd.json`
+- **Learnings for future iterations:**
+  - `DatePreset` type is now the single source of truth in `src/lib/utils/time.ts` — import from there, re-export from DateRangePicker for backward compatibility
+  - `export type { X } from "..."` re-exports a type but does NOT make it available locally — need separate `import type { X }` for local use
+  - Dashboard previously had an inline `getDateRange` — now uses the shared module, keeping the function DRY across the codebase
+  - Date range utility uses local time for presets (midnight, Monday) — appropriate for user-facing date ranges
+---

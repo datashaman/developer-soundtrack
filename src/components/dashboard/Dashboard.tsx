@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { RepoSelector } from "./RepoSelector";
 import { DateRangePicker, type DatePreset } from "./DateRangePicker";
+import { getDateRange } from "@/lib/utils/time";
 import { AuthButton } from "@/components/shared/AuthButton";
 
 interface RecentSession {
@@ -43,36 +44,6 @@ function saveRecentSession(session: RecentSession) {
   }
 }
 
-function getDateRange(preset: DatePreset, customFrom: string, customTo: string): { from: string; to: string } {
-  const now = new Date();
-  switch (preset) {
-    case "today": {
-      const start = new Date(now);
-      start.setHours(0, 0, 0, 0);
-      return { from: start.toISOString(), to: now.toISOString() };
-    }
-    case "week": {
-      const start = new Date(now);
-      const day = start.getDay();
-      const diff = day === 0 ? 6 : day - 1; // Monday = 0
-      start.setDate(start.getDate() - diff);
-      start.setHours(0, 0, 0, 0);
-      return { from: start.toISOString(), to: now.toISOString() };
-    }
-    case "sprint": {
-      const start = new Date(now);
-      start.setDate(start.getDate() - 14);
-      start.setHours(0, 0, 0, 0);
-      return { from: start.toISOString(), to: now.toISOString() };
-    }
-    case "custom": {
-      return {
-        from: customFrom ? new Date(customFrom).toISOString() : "",
-        to: customTo ? new Date(`${customTo}T23:59:59`).toISOString() : new Date().toISOString(),
-      };
-    }
-  }
-}
 
 function formatPreset(preset: DatePreset, customFrom: string, customTo: string): string {
   switch (preset) {
