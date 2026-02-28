@@ -563,7 +563,8 @@
         "Returns 200 on success, 401 on invalid signature, 400 on malformed payload"
       ],
       "priority": 35,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-036",

@@ -583,3 +583,25 @@
   - NowPlaying `compact` prop keeps component reusable — same component renders full card or bottom bar based on context
   - Three-breakpoint pattern: use `hidden lg:block` for desktop-only, `hidden md:block lg:hidden` for tablet-only, `block md:hidden` for mobile-only
 ---
+
+## 2026-02-28 - US-035
+- Implemented webhook receiver endpoint at `src/app/api/webhook/route.ts`
+  - **POST /api/webhook**: receives GitHub webhook payloads for push events
+  - Validates `X-Hub-Signature-256` header against stored webhook secret using timing-safe comparison (`timingSafeEqual`)
+  - Looks up repo by `full_name` from payload to retrieve the stored webhook secret
+  - Parses push event payloads to extract commits from `commits` array
+  - Processes each commit: language detection from added/modified/removed file lists, computes musical params via `commitToMusicalParams`
+  - CI status defaults to `"unknown"` for webhook-received commits (no API call to fetch check runs)
+  - Stores processed commits in SQLite via `createCommits()`
+  - Responds to `ping` events with `{ message: "pong" }`
+  - Ignores non-push/non-ping events gracefully (returns 200)
+  - Returns 200 on success, 401 on invalid/missing signature, 400 on malformed payload
+- 18 unit tests in `route.test.ts` covering: empty body, invalid JSON, malformed payload, unregistered repo, missing secret, missing signature header, invalid signature, wrong secret, ping event, ignored events, push processing, commit field mapping, musical params computation, language detection, no commits, multiple commits, author fallback, repo lookup
+- Files changed: `src/app/api/webhook/route.ts`, `src/app/api/webhook/route.test.ts`
+- **Learnings for future iterations:**
+  - Webhook signature verification uses `crypto.createHmac("sha256", secret)` + `timingSafeEqual` — the `try/catch` around `timingSafeEqual` handles buffer length mismatches (throws if different lengths)
+  - Push event payloads have `added`, `removed`, `modified` file arrays per commit (not `files` with `changes` count like the Commits API) — each file counts as 1 change
+  - Stats from webhook push events are approximate: `additions = added.length + modified.length`, `deletions = removed.length` — more accurate stats would require fetching commit details from the API
+  - DB mock pattern for API route tests: use separate `vi.fn()` variables wired through mock factory, same as auth mock pattern used in other API route tests
+  - `request.text()` returns empty string for empty body (not null) — check with `!rawBody` truthiness
+---
