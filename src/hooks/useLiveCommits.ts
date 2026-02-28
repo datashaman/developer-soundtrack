@@ -38,7 +38,7 @@ export function useLiveCommits(repo: string | null): UseLiveCommitsReturn {
     }
 
     const pusher = getPusherClient();
-    const [owner, repoName] = repo.split("/");
+    const [owner, repoName] = repo.toLowerCase().split("/");
     const channelName = `repo-${owner}-${repoName}`;
 
     const channel = pusher.subscribe(channelName);

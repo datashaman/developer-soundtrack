@@ -196,8 +196,8 @@ export async function POST(request: NextRequest) {
   // Store in SQLite
   await createCommits(commits);
 
-  // Broadcast to Pusher channel for this repo
-  const [repoOwner, repoName] = payload.repository.full_name.split("/");
+  // Broadcast to Pusher channel for this repo (lowercase for consistent matching)
+  const [repoOwner, repoName] = payload.repository.full_name.toLowerCase().split("/");
   const channel = `repo-${repoOwner}-${repoName}`;
   await getPusher().trigger(channel, "commits", commits);
 

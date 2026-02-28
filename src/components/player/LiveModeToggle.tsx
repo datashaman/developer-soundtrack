@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 interface LiveModeToggleProps {
@@ -87,29 +88,38 @@ export function LiveModeToggle({ owner, repo }: LiveModeToggleProps) {
 
   return (
     <div className="flex items-center gap-2">
-      <button
-        onClick={handleToggle}
-        disabled={isLoading}
-        className={`flex items-center gap-1.5 px-2.5 py-1.5 min-h-9 rounded-lg text-xs font-mono transition-colors ${
-          status?.registered
-            ? "bg-accent/15 text-accent border border-accent/30"
-            : "bg-input-bg text-text-muted border border-border-strong hover:bg-progress-bg hover:text-text-primary"
-        } ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
-        title={
-          status?.registered
-            ? "Live mode is enabled — click to disable"
-            : "Enable live mode to hear commits in real-time"
-        }
-      >
-        {/* Pulsing dot for live mode */}
-        {status?.registered && (
+      {status?.registered ? (
+        <>
+        <Link
+          href={`/play/${owner}/${repo}/live`}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 min-h-9 rounded-lg text-xs font-mono bg-accent/15 text-accent border border-accent/30 hover:bg-accent/25 hover:border-accent/50 transition-colors"
+          title="Open live player — hear commits as they’re pushed"
+        >
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-accent" />
           </span>
-        )}
-        {isLoading ? "..." : status?.registered ? "Live" : "Go Live"}
-      </button>
+          Listen live
+        </Link>
+        <button
+          onClick={handleToggle}
+          disabled={isLoading}
+          className="px-2 py-1 text-xs font-mono text-text-muted hover:text-text-primary"
+          title="Disable live mode"
+        >
+          {isLoading ? "..." : "Disable"}
+        </button>
+        </>
+      ) : (
+        <button
+          onClick={handleToggle}
+          disabled={isLoading}
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 min-h-9 rounded-lg text-xs font-mono transition-colors bg-input-bg text-text-muted border border-border-strong hover:bg-progress-bg hover:text-text-primary ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+          title="Enable live mode to hear commits in real-time"
+        >
+          {isLoading ? "..." : "Go Live"}
+        </button>
+      )}
       {error && (
         <span className="text-xs text-red-400 font-mono max-w-[200px] truncate" title={error}>
           {error}
