@@ -709,8 +709,8 @@
         "Network error states for SSE disconnects in live mode"
       ],
       "priority": 44,
-      "inProgress": true,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-045",

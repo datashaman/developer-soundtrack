@@ -34,9 +34,11 @@
 - Responsive breakpoints: mobile (<768px / `md:`), tablet (768-1024px / `lg:`), desktop (>1024px). Use `min-h-11` (44px) for touch targets on mobile
 - Three-breakpoint visibility: `hidden lg:block` (desktop-only), `hidden md:block lg:hidden` (tablet-only), `block md:hidden` (mobile-only)
 - Database: `@libsql/client` (Turso-compatible), async API; db modules in `src/lib/db/`
-- SSE event bus: singleton in `src/lib/sse/event-bus.ts` — webhook receiver broadcasts, `/api/live` subscribes
-- SSE endpoint: `/api/live?repo=owner/repo` — requires auth, returns `text/event-stream` with `connected`, `commits`, and `heartbeat` events
-- SSE tests: use `vi.resetModules()` + re-import in `beforeEach` to get fresh singleton for each test
+- Live mode: Pusher for real-time events — server in `src/lib/pusher/server.ts`, client in `src/lib/pusher/client.ts`
+- Pusher channel naming: `repo-${owner}-${repoName}` — events: `commits` (array of Commit objects)
+- Pusher test mocking: mock `@/lib/pusher/client` with factory returning subscribe/unsubscribe/connection; wrap _emit calls in `act()`
+- Rate limit flow: `fetchCommits` → `getCachedCommits` → API route → `useCommits` → player UI (null when served from cache)
+- Error retry pattern: `useCommits` exposes `retry()` — RepoSelector uses `useCallback` + `fetchRepos()` for retry
 - React state accumulation pattern: to accumulate values from a changing prop/hook value, use "adjust state during render" with `useState` for previous-value tracking (not refs) — avoids `react-hooks/set-state-in-effect` and `react-hooks/refs` lint errors
 - Settings components go in `src/components/settings/` — presentational components that take state props and onChange callbacks
 - `enabledLanguages` semantics: empty `[]` = all enabled (default), non-empty = explicit list — consistent across DB, API, engine, and UI
@@ -815,4 +817,22 @@
   - `export type { X } from "..."` re-exports a type but does NOT make it available locally — need separate `import type { X }` for local use
   - Dashboard previously had an inline `getDateRange` — now uses the shared module, keeping the function DRY across the codebase
   - Date range utility uses local time for presets (midnight, Monday) — appropriate for user-facing date ranges
+---
+
+## 2026-02-28 - US-044
+- Implemented consistent error handling and loading states across the entire application
+- **Retry on errors**: Added `retry()` function to `useCommits` hook; player page error state now includes "Try again" button; RepoSelector error state includes "Try again" button
+- **Empty state for no repos**: RepoSelector shows "No repositories found. Connect a repository to get started." when API returns empty array
+- **GitHub rate limit warning**: Plumbed `rateLimitRemaining` from `fetchCommits` → `getCachedCommits` → `/api/commits` → `useCommits` hook → player page; shows yellow warning banner when remaining calls < 100
+- **Audio initialization error**: Added `audioError` state to `useMusicEngine` hook; `play()` catches errors from `ensureInitialized()` with user-friendly message for Web Audio failures; error displayed as red banner on player page and live mode page
+- **Network error states for live mode**: Enhanced SSE disconnect banner with auto-reconnect explanation; live indicator dot changes to yellow with "Reconnecting" text when disconnected; audio error banner added to live page
+- Also fixed pre-existing issues: webhook route `const repo` redeclaration (TS error), missing Pusher mock in webhook tests, duplicate `vi.mock` and missing `act()` wrappers in useLiveCommits tests
+- Files changed: `src/hooks/useCommits.ts`, `src/hooks/useMusicEngine.ts`, `src/app/play/[owner]/[repo]/page.tsx`, `src/app/play/[owner]/[repo]/live/page.tsx`, `src/components/dashboard/RepoSelector.tsx`, `src/lib/github/cache.ts`, `src/app/api/commits/route.ts`, `src/app/api/commits/route.test.ts`, `src/app/api/webhook/route.ts`, `src/app/api/webhook/route.test.ts`, `src/hooks/useLiveCommits.test.tsx`
+- **Learnings for future iterations:**
+  - `rateLimitRemaining` flows: `fetchCommits` (from GitHub headers) → `getCachedCommits` (tracks across pages) → API route → client hook → UI display
+  - Cache hits return `rateLimitRemaining: null` since no GitHub API call was made — UI should only show warning when value is non-null and < threshold
+  - Audio init errors in `ensureInitialized()` should be caught in the `play()` function and surfaced as state, not just console logged
+  - RepoSelector refactored from `useEffect` closure pattern to `useCallback` + `useEffect` for better retry support
+  - Pre-existing test failures (Pusher "Options object must provide a cluster") were caused by missing `vi.mock` for `@/lib/pusher/server` — always mock external service clients in tests
+  - React hook state updates from external callbacks (Pusher `bind`) must be wrapped in `act()` in tests
 ---
