@@ -626,3 +626,24 @@
   - The event bus broadcast automatically removes disconnected clients (callback returns false) — no manual cleanup needed
   - ReadableStream `controller.enqueue()` can throw after close — wrap in try/catch and set a `closed` flag
 ---
+
+## 2026-02-28 - US-037
+- Implemented `useLiveCommits` React hook in `src/hooks/useLiveCommits.ts`
+  - Accepts `repo: string | null` — no connection when null
+  - Establishes SSE connection to `/api/live?repo=...` via `EventSource`
+  - Returns `{ latestCommit, isConnected, error }`
+  - Listens for `connected` event (sets `isConnected` true), `commits` event (parses JSON, sets `latestCommit` to last commit in batch)
+  - Auto-reconnects on disconnect with 3-second delay via `setTimeout`
+  - Cleans up EventSource and reconnect timer on unmount
+  - Cleans up and creates new connection when repo changes
+  - Resets state when repo changes to null
+  - Guards against state updates after unmount via `unmountedRef`
+- 16 unit tests in `src/hooks/useLiveCommits.test.tsx` covering: initial state (null repo), no EventSource creation for null, correct URL construction, connected event, single commit, multiple commits (last wins), empty commits array, malformed JSON, error/disconnect, auto-reconnect, clear error on reconnect, unmount cleanup, cancel reconnect on unmount, repo change, repo→null cleanup, no state after unmount
+- Files changed: `src/hooks/useLiveCommits.ts`, `src/hooks/useLiveCommits.test.tsx`
+- **Learnings for future iterations:**
+  - EventSource mock requires `function` constructor (not arrow function) — same pattern as Tone.js mocks: `function MockEventSourceConstructor(this: T, url: string) { ... }`
+  - `vi.fn().mockImplementation(() => ...)` fails with "is not a constructor" when used with `new` — Vitest detects arrow functions and warns
+  - For EventSource mocks, track instances in an external array (`mockEventSourceInstances.push(this)`) instead of using `vi.fn().mock.instances`
+  - SSE reconnect pattern: on `onerror`, close the EventSource, set error state, schedule reconnect with `setTimeout`, guard reconnect callback with `unmountedRef`
+  - `encodeURIComponent` encodes `/` as `%2F` — test assertions for URL must use encoded form
+---

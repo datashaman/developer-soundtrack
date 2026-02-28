@@ -594,7 +594,8 @@
         "Cleans up SSE connection on unmount"
       ],
       "priority": 37,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-038",
