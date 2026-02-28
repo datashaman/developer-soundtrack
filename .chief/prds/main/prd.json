@@ -612,7 +612,8 @@
         "Now-playing card updates with each new commit"
       ],
       "priority": 38,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-039",

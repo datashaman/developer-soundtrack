@@ -37,6 +37,7 @@
 - SSE event bus: singleton in `src/lib/sse/event-bus.ts` — webhook receiver broadcasts, `/api/live` subscribes
 - SSE endpoint: `/api/live?repo=owner/repo` — requires auth, returns `text/event-stream` with `connected`, `commits`, and `heartbeat` events
 - SSE tests: use `vi.resetModules()` + re-import in `beforeEach` to get fresh singleton for each test
+- React state accumulation pattern: to accumulate values from a changing prop/hook value, use "adjust state during render" with `useState` for previous-value tracking (not refs) — avoids `react-hooks/set-state-in-effect` and `react-hooks/refs` lint errors
 
 ---
 
@@ -646,4 +647,32 @@
   - For EventSource mocks, track instances in an external array (`mockEventSourceInstances.push(this)`) instead of using `vi.fn().mock.instances`
   - SSE reconnect pattern: on `onerror`, close the EventSource, set error state, schedule reconnect with `setTimeout`, guard reconnect callback with `unmountedRef`
   - `encodeURIComponent` encodes `/` as `%2F` — test assertions for URL must use encoded form
+---
+
+## 2026-02-28 - US-038
+- Implemented live mode player page at `src/app/play/[owner]/[repo]/live/page.tsx`
+  - Route connects via `useLiveCommits` hook to receive real-time SSE commits
+  - Each new commit plays immediately via `useMusicEngine.play()` when received
+  - Commits accumulate in a growing timeline (Timeline on md+, MobileCommitList on mobile)
+  - "Waiting for commits..." idle state with pulsing animation when connected but no commits yet
+  - Connecting state with spinner when SSE connection is being established
+  - Pulsing dot indicator + "Live" label in header showing live mode is active
+  - Waveform visualizer always visible and active during playback
+  - NowPlaying card updates with each new commit (desktop/tablet: full card, mobile: compact bottom bar)
+  - Volume control in header for quick access
+  - Back link to normal player page (`/play/[owner]/[repo]`), settings gear link
+  - Connection error shown in yellow warning banner, with "Reconnecting..." in header subtitle
+  - Instrument legend shows active languages from received commits
+  - Duplicate commit detection prevents same commit from appearing twice
+- Used React "adjust state during render" pattern with `useState` (not refs) to accumulate live commits — avoids both `react-hooks/set-state-in-effect` and `react-hooks/refs` lint errors
+- Responsive layout follows same three-breakpoint pattern as normal player page
+- 17 unit tests in `page.test.tsx` covering: rendering, live indicator, waiting state, connecting state, error state, waveform, immediate playback, timeline accumulation, multi-commit, deduplication, instrument legend, commit count, reconnecting, repo passthrough, back link, settings link, volume, compact now-playing
+- Files changed: `src/app/play/[owner]/[repo]/live/page.tsx` (new), `src/app/play/[owner]/[repo]/live/page.test.tsx` (new), `.chief/prds/main/prd.json`
+- **Learnings for future iterations:**
+  - React lint `react-hooks/set-state-in-effect`: cannot call `setState` synchronously in `useEffect` body — use "adjust state during render" pattern (check condition using state, not refs, and call `setState` during render)
+  - React lint `react-hooks/refs`: cannot read/write `ref.current` during render — use `useState` for tracking previous values during render instead
+  - Combined pattern for accumulation: track `prevLatestId` in state, check during render, call `setLiveCommits`, then use a separate `useEffect` (with ref) for side-effects like playing audio
+  - Live page doesn't need TransportControls — commits play automatically, no play/pause/stop needed
+  - Mock child components in page tests to avoid rendering complexity — use `vi.mock` with simple `data-testid` divs
+  - When testing for text that may appear multiple times in DOM (e.g. repo name in header + body), use `getAllByText` instead of `getByText`
 ---
