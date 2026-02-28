@@ -83,7 +83,6 @@ export function useMusicEngine(): UseMusicEngineReturn {
     };
 
     engine.onError = (error: Error) => {
-      console.error("MusicEngine error:", error);
       setAudioError(error.message);
       setIsPlaying(false);
     };
