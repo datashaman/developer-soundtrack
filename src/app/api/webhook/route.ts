@@ -8,6 +8,7 @@ import {
   type FileChange,
 } from "@/lib/github/languages";
 import { commitToMusicalParams } from "@/lib/music/mapping";
+import { sseEventBus } from "@/lib/sse/event-bus";
 import type { Commit, CIStatus } from "@/types";
 
 /**
@@ -194,6 +195,10 @@ export async function POST(request: NextRequest) {
 
   // Store in SQLite
   await createCommits(commits);
+
+  // Broadcast to connected SSE clients for this repo
+  const repoFullName = payload.repository.full_name;
+  sseEventBus.broadcast(repoFullName, commits);
 
   return NextResponse.json({
     message: "Webhook processed successfully",

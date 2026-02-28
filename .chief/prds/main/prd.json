@@ -578,7 +578,8 @@
         "Reconnection support on the client side"
       ],
       "priority": 36,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-037",

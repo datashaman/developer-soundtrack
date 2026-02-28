@@ -34,6 +34,9 @@
 - Responsive breakpoints: mobile (<768px / `md:`), tablet (768-1024px / `lg:`), desktop (>1024px). Use `min-h-11` (44px) for touch targets on mobile
 - Three-breakpoint visibility: `hidden lg:block` (desktop-only), `hidden md:block lg:hidden` (tablet-only), `block md:hidden` (mobile-only)
 - Database: `@libsql/client` (Turso-compatible), async API; db modules in `src/lib/db/`
+- SSE event bus: singleton in `src/lib/sse/event-bus.ts` — webhook receiver broadcasts, `/api/live` subscribes
+- SSE endpoint: `/api/live?repo=owner/repo` — requires auth, returns `text/event-stream` with `connected`, `commits`, and `heartbeat` events
+- SSE tests: use `vi.resetModules()` + re-import in `beforeEach` to get fresh singleton for each test
 
 ---
 
@@ -604,4 +607,22 @@
   - Stats from webhook push events are approximate: `additions = added.length + modified.length`, `deletions = removed.length` — more accurate stats would require fetching commit details from the API
   - DB mock pattern for API route tests: use separate `vi.fn()` variables wired through mock factory, same as auth mock pattern used in other API route tests
   - `request.text()` returns empty string for empty body (not null) — check with `!rawBody` truthiness
+---
+
+## 2026-02-28 - US-036
+- Implemented Server-Sent Events (SSE) for live commit streaming with three components:
+  - **SSE Event Bus** (`src/lib/sse/event-bus.ts`): In-memory pub/sub singleton that routes commits from webhook to SSE clients by repo. Supports subscribe, unsubscribe, broadcast with automatic cleanup of disconnected clients
+  - **SSE Endpoint** (`src/app/api/live/route.ts`): `GET /api/live?repo=owner/repo` — authenticated SSE endpoint using `ReadableStream`. Sends `connected` event on open, `commits` events when webhooks arrive, `heartbeat` every 30s. Cleans up on client disconnect via `AbortSignal`
+  - **Webhook Integration**: Updated `src/app/api/webhook/route.ts` to import `sseEventBus` and call `broadcast()` after storing commits in SQLite
+- 27 new tests:
+  - `src/lib/sse/event-bus.test.ts` (18 tests): subscribe, unsubscribe, broadcast, client count, disconnect cleanup, repo isolation, edge cases
+  - `src/app/api/live/route.test.ts` (9 tests): auth, param validation, SSE headers, event bus subscription, initial connected event, commit streaming, abort/disconnect cleanup
+- Files changed: `src/lib/sse/event-bus.ts` (new), `src/lib/sse/event-bus.test.ts` (new), `src/app/api/live/route.ts` (new), `src/app/api/live/route.test.ts` (new), `src/app/api/webhook/route.ts` (modified)
+- **Learnings for future iterations:**
+  - SSE in Next.js App Router: use `new ReadableStream()` with `start(controller)` and `TextEncoder` to create `text/event-stream` responses — no special libraries needed
+  - SSE format: `event: <name>\ndata: <json>\n\n` — double newline terminates each event
+  - Client disconnect detection: use `request.signal.addEventListener("abort", ...)` — Next.js fires abort when SSE client disconnects
+  - For singleton testing, use `vi.resetModules()` + dynamic `await import("./module")` in `beforeEach` to get a fresh instance per test
+  - The event bus broadcast automatically removes disconnected clients (callback returns false) — no manual cleanup needed
+  - ReadableStream `controller.enqueue()` can throw after close — wrap in try/catch and set a `closed` flag
 ---
