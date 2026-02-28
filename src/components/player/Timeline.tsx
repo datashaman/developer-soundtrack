@@ -3,24 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as d3 from "d3";
 import type { Commit } from "@/types";
-
-/** Language color map */
-const LANGUAGE_COLORS: Record<string, string> = {
-  Python: "#3572A5",
-  JavaScript: "#f1e05a",
-  TypeScript: "#3178c6",
-  Rust: "#dea584",
-  Go: "#00ADD8",
-  Java: "#b07219",
-  C: "#555555",
-  "C++": "#f34b7d",
-  Ruby: "#701516",
-  CSS: "#563d7c",
-  HTML: "#e34c26",
-  Shell: "#89e051",
-  Markdown: "#083fa1",
-  Other: "#00ffc8",
-};
+import { LANGUAGE_COLORS } from "@/components/shared/LanguageIcon";
+import { DiffStats } from "@/components/shared/DiffStats";
 
 /** Compute node size from diff stats (min 8px, max 28px) */
 function getNodeSize(commit: Commit): number {
@@ -217,12 +201,10 @@ export function Timeline({ commits, currentCommitId, onSeek }: TimelineProps) {
           <p className="text-white/60 truncate">{tooltip.commit.message}</p>
           <p className="text-white/40 mt-1">
             {new Date(tooltip.commit.timestamp).toLocaleString()} &middot;{" "}
-            <span className="text-green-400">
-              +{tooltip.commit.stats.additions}
-            </span>{" "}
-            <span className="text-red-400">
-              &minus;{tooltip.commit.stats.deletions}
-            </span>
+            <DiffStats
+              additions={tooltip.commit.stats.additions}
+              deletions={tooltip.commit.stats.deletions}
+            />
           </p>
         </div>
       )}

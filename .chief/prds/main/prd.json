@@ -501,7 +501,8 @@
         "Components follow the dark-theme visual aesthetic"
       ],
       "priority": 31,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-032",

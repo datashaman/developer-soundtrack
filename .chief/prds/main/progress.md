@@ -31,6 +31,8 @@
 - API route auth pattern: call `auth()` from `@/lib/auth`, check `session?.accessToken`, return 401 if missing
 - API route test mocking for `auth()`: use separate `vi.fn<() => Promise<Session | null>>()` wired through mock factory to avoid NextAuth overloaded type issues
 - React `react-hooks/refs` lint rule: cannot assign `ref.current = value` during render — use `useEffect` to sync state to refs
+- Shared UI components in `src/components/shared/`: `LanguageIcon`, `CIBadge`, `DiffStats` — use these instead of inline implementations
+- `LANGUAGE_COLORS` single source of truth: import from `@/components/shared/LanguageIcon` — never duplicate the color map
 
 ---
 
@@ -533,4 +535,25 @@
   - D3 `selectAll().data().join()` pattern handles enter/update/exit automatically — cleaner than manual enter/exit
   - Timeline component is presentational: takes `commits`, `currentCommitId`, and `onSeek` as props (no internal hooks for data fetching)
   - `LANGUAGE_COLORS` map is duplicated across NowPlaying, TestPlayer, Timeline, and player page — consider extracting to shared module in future
+---
+
+## 2026-02-28 - US-031
+- Created three reusable shared UI components in `src/components/shared/`:
+  - **LanguageIcon** (`LanguageIcon.tsx`): Colored dot for programming languages with optional label, custom size, and aria-label for accessibility. Also exports `LANGUAGE_COLORS` as single source of truth
+  - **CIBadge** (`CIBadge.tsx`): CI status badge with SVG icons — green checkmark (pass), red X (fail), yellow clock (pending), gray question mark (unknown). Optional label display
+  - **DiffStats** (`DiffStats.tsx`): `+N −M` display with green/red coloring for additions/deletions
+- Refactored 5 existing components to use shared components and eliminate `LANGUAGE_COLORS` duplication:
+  - `NowPlaying.tsx`: Replaced inline language dot, CI icon, and diff stats with `LanguageIcon`, `CIBadge`, `DiffStats`
+  - `InstrumentLegend.tsx`: Replaced inline language dot with `LanguageIcon`
+  - `WaveformVisualizer.tsx`: Imported `LANGUAGE_COLORS` from shared module
+  - `Timeline.tsx`: Imported `LANGUAGE_COLORS` from shared module, replaced inline diff stats in tooltip with `DiffStats`
+  - `TestPlayer.tsx`: Replaced inline language dot with `LanguageIcon`
+- 23 new unit tests across 3 test files (10 LanguageIcon, 7 CIBadge, 6 DiffStats)
+- All 411 tests passing, typecheck clean
+- Files changed: `src/components/shared/LanguageIcon.tsx`, `src/components/shared/LanguageIcon.test.tsx`, `src/components/shared/CIBadge.tsx`, `src/components/shared/CIBadge.test.tsx`, `src/components/shared/DiffStats.tsx`, `src/components/shared/DiffStats.test.tsx`, `src/components/player/NowPlaying.tsx`, `src/components/player/InstrumentLegend.tsx`, `src/components/player/WaveformVisualizer.tsx`, `src/components/player/Timeline.tsx`, `src/components/player/TestPlayer.tsx`
+- **Learnings for future iterations:**
+  - `LANGUAGE_COLORS` is now the single source of truth in `src/components/shared/LanguageIcon.tsx` — import from there, never duplicate
+  - Shared components are presentational (no hooks) — makes them easy to test and reuse
+  - `querySelector` returns `Element` (no `.style`), cast to `HTMLElement` in tests when checking style properties
+  - Extracting shared components also simplified NowPlaying significantly — removed ~50 lines of inline CI icon and display logic
 ---

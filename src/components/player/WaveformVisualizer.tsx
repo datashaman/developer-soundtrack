@@ -1,24 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useCallback } from "react";
-
-/** Color map for programming languages — used for waveform stroke color */
-const LANGUAGE_COLORS: Record<string, string> = {
-  Python: "#3572A5",
-  JavaScript: "#f1e05a",
-  TypeScript: "#3178c6",
-  Rust: "#dea584",
-  Go: "#00ADD8",
-  Java: "#b07219",
-  C: "#555555",
-  "C++": "#f34b7d",
-  Ruby: "#701516",
-  CSS: "#563d7c",
-  HTML: "#e34c26",
-  Shell: "#89e051",
-  Markdown: "#083fa1",
-  Other: "#00ffc8",
-};
+import { LANGUAGE_COLORS } from "@/components/shared/LanguageIcon";
 
 const DEFAULT_STROKE_COLOR = "#00ffc8";
 

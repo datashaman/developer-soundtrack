@@ -7,24 +7,7 @@ import { WaveformVisualizer } from "./WaveformVisualizer";
 import { TransportControls } from "./TransportControls";
 import { NowPlaying } from "./NowPlaying";
 import { Timeline } from "./Timeline";
-
-/** Language color map for the commit info display */
-const LANGUAGE_COLORS: Record<string, string> = {
-  Python: "#3572A5",
-  JavaScript: "#f1e05a",
-  TypeScript: "#3178c6",
-  Rust: "#dea584",
-  Go: "#00ADD8",
-  Java: "#b07219",
-  C: "#555555",
-  "C++": "#f34b7d",
-  Ruby: "#701516",
-  CSS: "#563d7c",
-  HTML: "#e34c26",
-  Shell: "#89e051",
-  Markdown: "#083fa1",
-  Other: "#00ffc8",
-};
+import { LanguageIcon } from "@/components/shared/LanguageIcon";
 
 export function TestPlayer() {
   const {
@@ -130,14 +113,7 @@ export function TestPlayer() {
                 >
                   {idx + 1}
                 </span>
-                <span
-                  className="inline-block h-2 w-2 rounded-full shrink-0"
-                  style={{
-                    backgroundColor:
-                      LANGUAGE_COLORS[commit.primaryLanguage] ??
-                      LANGUAGE_COLORS.Other,
-                  }}
-                />
+                <LanguageIcon language={commit.primaryLanguage} size={8} />
                 <span
                   className={`text-xs font-mono truncate ${
                     isActive ? "text-white" : "text-white/60"
