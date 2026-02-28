@@ -489,3 +489,23 @@
   - `useParams<{ owner: string; repo: string }>()` provides typed route params in Next.js App Router dynamic routes
   - Language colors map, CI status display map, and date range formatter are duplicated from TestPlayer — could be extracted to shared module when more components need them
 ---
+
+## 2026-02-28 - US-028
+- Implemented `NowPlaying` component in `src/components/player/NowPlaying.tsx`
+  - Displays author avatar (initial) + login, commit message (truncated to 2 lines via `line-clamp-2`)
+  - Language icon (colored dot) + language name
+  - Diff stats (`+N −M` with green/red coloring)
+  - CI status badge with SVG icons (checkmark for pass, X for fail, clock for pending, question mark for unknown)
+  - Musical info line showing instrument, note, scale, duration, and pan
+  - Subtle entrance animation (`nowPlayingIn` keyframe) triggered by `key={currentCommit.id}` — React remounts the div on commit change
+  - Graceful empty state: "Press play to start the soundtrack"
+- Integrated NowPlaying into player page (`src/app/play/[owner]/[repo]/page.tsx`) and `TestPlayer.tsx`, replacing inline now-playing card code
+- Removed duplicate `CI_STATUS_DISPLAY` from both player page and TestPlayer (NowPlaying handles CI display internally)
+- 14 unit tests in `NowPlaying.test.tsx` covering: empty state, author display, commit message, language display, diff stats, all 4 CI statuses, musical info, entrance animation, line-clamp truncation, language color dot, unknown language fallback
+- Files changed: `src/components/player/NowPlaying.tsx`, `src/components/player/NowPlaying.test.tsx`, `src/app/play/[owner]/[repo]/page.tsx`, `src/components/player/TestPlayer.tsx`
+- **Learnings for future iterations:**
+  - React lint `react-hooks/set-state-in-effect` prevents `setState` inside `useEffect` — for animation triggers on prop changes, use React's `key` prop to force remount instead of state-based animation key
+  - CI status icons are inline SVGs with distinct shapes: checkmark (pass), X (fail), clock (pending), question mark (unknown) — more expressive than colored dots alone
+  - `line-clamp-2` Tailwind class truncates text to 2 lines with ellipsis — preferred over `truncate` (single line) for commit messages
+  - NowPlaying is a presentational component (no hooks) — takes `currentCommit: Commit | null` as sole prop, making it easy to test and reuse
+---

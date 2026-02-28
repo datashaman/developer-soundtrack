@@ -7,6 +7,7 @@ import { useCommits } from "@/hooks/useCommits";
 import { useMusicEngine } from "@/hooks/useMusicEngine";
 import { WaveformVisualizer } from "@/components/player/WaveformVisualizer";
 import { TransportControls } from "@/components/player/TransportControls";
+import { NowPlaying } from "@/components/player/NowPlaying";
 import type { Commit } from "@/types";
 
 /** Language color map */
@@ -25,14 +26,6 @@ const LANGUAGE_COLORS: Record<string, string> = {
   Shell: "#89e051",
   Markdown: "#083fa1",
   Other: "#00ffc8",
-};
-
-/** CI status display config */
-const CI_STATUS_DISPLAY: Record<string, { label: string; color: string }> = {
-  pass: { label: "Passed", color: "#22c55e" },
-  fail: { label: "Failed", color: "#ef4444" },
-  pending: { label: "Pending", color: "#eab308" },
-  unknown: { label: "Unknown", color: "#6b7280" },
 };
 
 function formatDateRange(from: string | null, to: string | null, range: string | null): string {
@@ -112,8 +105,6 @@ export default function PlayerPage() {
     },
     [play, seekTo],
   );
-
-  const ci = currentCommit ? CI_STATUS_DISPLAY[currentCommit.ciStatus] : null;
 
   // Compute unique active languages for instrument legend
   const activeLanguages = Array.from(new Set(commits.map((c) => c.primaryLanguage)));
@@ -219,62 +210,7 @@ export default function PlayerPage() {
             </div>
 
             {/* Now Playing Card */}
-            <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-5">
-              {currentCommit ? (
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-mono font-bold text-[#00ffc8]">
-                      {currentCommit.author.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-mono font-semibold text-white/90">
-                        {currentCommit.author}
-                      </p>
-                      <p className="text-sm text-white/60 truncate">
-                        {currentCommit.message}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-4 text-xs font-mono">
-                    <span className="flex items-center gap-1.5">
-                      <span
-                        className="inline-block h-2.5 w-2.5 rounded-full"
-                        style={{
-                          backgroundColor:
-                            LANGUAGE_COLORS[currentCommit.primaryLanguage] ??
-                            LANGUAGE_COLORS.Other,
-                        }}
-                      />
-                      <span className="text-white/70">{currentCommit.primaryLanguage}</span>
-                    </span>
-                    <span>
-                      <span className="text-green-400">+{currentCommit.stats.additions}</span>{" "}
-                      <span className="text-red-400">&minus;{currentCommit.stats.deletions}</span>
-                    </span>
-                    {ci && (
-                      <span className="flex items-center gap-1">
-                        <span
-                          className="inline-block h-2 w-2 rounded-full"
-                          style={{ backgroundColor: ci.color }}
-                        />
-                        <span style={{ color: ci.color }}>{ci.label}</span>
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs font-mono text-white/40">
-                    {currentCommit.musicalParams.instrument} &rarr;{" "}
-                    {currentCommit.musicalParams.note}{" "}
-                    {currentCommit.musicalParams.scale},{" "}
-                    {currentCommit.musicalParams.duration.toFixed(2)}s, pan:{" "}
-                    {currentCommit.musicalParams.pan.toFixed(1)}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-white/30 text-center font-mono">
-                  Press play to start the soundtrack
-                </p>
-              )}
-            </div>
+            <NowPlaying currentCommit={currentCommit} />
 
             {/* Timeline placeholder (US-029) */}
             <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4">

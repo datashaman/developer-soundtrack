@@ -454,7 +454,8 @@
         "Graceful empty state when nothing is playing"
       ],
       "priority": 28,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-029",
