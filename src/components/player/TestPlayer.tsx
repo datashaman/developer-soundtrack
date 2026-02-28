@@ -55,7 +55,7 @@ export function TestPlayer() {
   return (
     <div className="flex flex-col gap-4 md:gap-6">
       {/* Waveform Visualizer */}
-      <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] overflow-hidden">
+      <div className="rounded-xl bg-surface border border-border-subtle overflow-hidden">
         <WaveformVisualizer
           getWaveformData={getWaveformData}
           isPlaying={isPlaying}
@@ -64,7 +64,7 @@ export function TestPlayer() {
       </div>
 
       {/* Transport Controls */}
-      <div className="rounded-xl bg-white/[0.03] border border-white/[0.06]">
+      <div className="rounded-xl bg-surface border border-border-subtle">
         <TransportControls
           isPlaying={isPlaying}
           currentIndex={currentIndex}
@@ -91,9 +91,9 @@ export function TestPlayer() {
       </div>
 
       {/* Commit list */}
-      <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] overflow-hidden">
-        <div className="px-4 py-2.5 border-b border-white/[0.06]">
-          <h2 className="text-xs font-mono font-semibold text-white/50 uppercase tracking-wider">
+      <div className="rounded-xl bg-surface border border-border-subtle overflow-hidden">
+        <div className="px-4 py-2.5 border-b border-border-subtle">
+          <h2 className="text-xs font-mono font-semibold text-text-muted uppercase tracking-wider">
             Sample Commits ({SAMPLE_COMMITS.length})
           </h2>
         </div>
@@ -104,13 +104,13 @@ export function TestPlayer() {
               <button
                 key={commit.id}
                 onClick={() => handleSeek(idx)}
-                className={`w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-white/[0.04] transition-colors border-b border-white/[0.03] last:border-b-0 min-h-11 ${
-                  isActive ? "bg-white/[0.06]" : ""
+                className={`w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-list-hover transition-colors border-b border-list-border last:border-b-0 min-h-11 ${
+                  isActive ? "bg-surface-active" : ""
                 }`}
               >
                 <span
                   className={`text-xs font-mono w-5 text-right shrink-0 ${
-                    isActive ? "text-[#00ffc8]" : "text-white/30"
+                    isActive ? "text-accent" : "text-text-ghost"
                   }`}
                 >
                   {idx + 1}
@@ -118,12 +118,12 @@ export function TestPlayer() {
                 <LanguageIcon language={commit.primaryLanguage} size={8} />
                 <span
                   className={`text-xs font-mono truncate ${
-                    isActive ? "text-white" : "text-white/60"
+                    isActive ? "text-foreground" : "text-text-muted"
                   }`}
                 >
                   {commit.message}
                 </span>
-                <span className="ml-auto text-xs font-mono text-white/20 shrink-0">
+                <span className="ml-auto text-xs font-mono text-text-dim shrink-0">
                   {commit.author}
                 </span>
               </button>

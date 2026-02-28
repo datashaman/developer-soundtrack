@@ -22,7 +22,7 @@ export function InstrumentLegend({ activeLanguages }: InstrumentLegendProps) {
   if (activeLanguages.length === 0) return null;
 
   return (
-    <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] px-4 py-3">
+    <div className="rounded-xl bg-surface border border-border-subtle px-4 py-3">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         {activeLanguages.map((lang) => {
           const config = LANGUAGE_SYNTH_MAP[lang] ?? LANGUAGE_SYNTH_MAP["Other"];
@@ -31,10 +31,10 @@ export function InstrumentLegend({ activeLanguages }: InstrumentLegendProps) {
           return (
             <span
               key={lang}
-              className="flex items-center gap-1.5 text-xs font-mono text-white/50"
+              className="flex items-center gap-1.5 text-xs font-mono text-text-muted"
             >
               <LanguageIcon language={lang} size={8} showLabel />
-              <span className="text-white/30">{instrumentName}</span>
+              <span className="text-text-ghost">{instrumentName}</span>
             </span>
           );
         })}

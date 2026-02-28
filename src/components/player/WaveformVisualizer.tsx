@@ -5,6 +5,11 @@ import { LANGUAGE_COLORS } from "@/components/shared/LanguageIcon";
 
 const DEFAULT_STROKE_COLOR = "#00ffc8";
 
+function getAccentColor(): string {
+  if (typeof document === "undefined") return DEFAULT_STROKE_COLOR;
+  return getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || DEFAULT_STROKE_COLOR;
+}
+
 interface WaveformVisualizerProps {
   /** Function returning current waveform data from MusicEngine */
   getWaveformData: () => Float32Array;
@@ -30,7 +35,7 @@ export function WaveformVisualizer({
   useEffect(() => {
     targetColorRef.current =
       (currentLanguage && LANGUAGE_COLORS[currentLanguage]) ||
-      DEFAULT_STROKE_COLOR;
+      getAccentColor();
   }, [currentLanguage]);
 
   const lerp = useCallback((a: number, b: number, t: number) => {
@@ -188,6 +193,7 @@ export function WaveformVisualizer({
       ref={canvasRef}
       className="h-[140px] w-full"
       style={{ display: "block" }}
+      data-no-transition
     />
   );
 }

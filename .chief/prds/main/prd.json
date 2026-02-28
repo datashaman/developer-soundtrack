@@ -532,7 +532,8 @@
         "prefers-color-scheme respected for initial state if no saved preference"
       ],
       "priority": 33,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-034",

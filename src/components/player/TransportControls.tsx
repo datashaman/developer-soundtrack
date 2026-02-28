@@ -127,11 +127,11 @@ export function TransportControls({
         aria-valuemin={0}
         aria-valuemax={totalCommits > 0 ? totalCommits - 1 : 0}
         aria-label="Playback progress"
-        className="w-full h-2 bg-white/10 rounded-full cursor-pointer relative"
+        className="w-full h-2 bg-progress-bg rounded-full cursor-pointer relative"
         onClick={handleProgressClick}
       >
         <div
-          className="h-full bg-[#00ffc8] rounded-full transition-all duration-150"
+          className="h-full bg-accent rounded-full transition-all duration-150"
           style={{ width: `${progress * 100}%` }}
         />
       </div>
@@ -145,7 +145,7 @@ export function TransportControls({
             onClick={handleSkipBack}
             disabled={currentIndex <= 0}
             aria-label="Skip backward"
-            className="min-h-11 min-w-11 flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors md:min-h-0 md:min-w-0 md:p-2"
+            className="min-h-11 min-w-11 flex items-center justify-center rounded-lg text-text-secondary hover:text-foreground hover:bg-progress-bg disabled:opacity-30 disabled:cursor-not-allowed transition-colors md:min-h-0 md:min-w-0 md:p-2"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
               <path d="M3 2h2v12H3V2zm10 0L6 8l7 6V2z" />
@@ -156,7 +156,7 @@ export function TransportControls({
           <button
             onClick={handlePlayPause}
             aria-label={isPlaying ? "Pause" : "Play"}
-            className="min-h-11 min-w-11 flex items-center justify-center rounded-full bg-[#00ffc8] text-[#0a0a0e] hover:bg-[#00e6b4] transition-colors md:p-3"
+            className="min-h-11 min-w-11 flex items-center justify-center rounded-full bg-accent text-background hover:bg-accent-hover transition-colors md:p-3"
           >
             {isPlaying ? (
               <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
@@ -174,7 +174,7 @@ export function TransportControls({
           <button
             onClick={handleStop}
             aria-label="Stop"
-            className="min-h-11 min-w-11 flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors md:min-h-0 md:min-w-0 md:p-2"
+            className="min-h-11 min-w-11 flex items-center justify-center rounded-lg text-text-secondary hover:text-foreground hover:bg-progress-bg transition-colors md:min-h-0 md:min-w-0 md:p-2"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
               <rect x="3" y="3" width="10" height="10" rx="1" />
@@ -186,7 +186,7 @@ export function TransportControls({
             onClick={handleSkipForward}
             disabled={currentIndex >= totalCommits - 1}
             aria-label="Skip forward"
-            className="min-h-11 min-w-11 flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors md:min-h-0 md:min-w-0 md:p-2"
+            className="min-h-11 min-w-11 flex items-center justify-center rounded-lg text-text-secondary hover:text-foreground hover:bg-progress-bg disabled:opacity-30 disabled:cursor-not-allowed transition-colors md:min-h-0 md:min-w-0 md:p-2"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
               <path d="M3 2l7 6-7 6V2zm8 0h2v12h-2V2z" />
@@ -194,7 +194,7 @@ export function TransportControls({
           </button>
 
           {/* Commit counter */}
-          <span className="text-xs text-white/50 ml-2 font-mono">
+          <span className="text-xs text-text-muted ml-2 font-mono">
             {totalCommits > 0
               ? `${currentIndex + 1} / ${totalCommits}`
               : "0 / 0"}
@@ -205,7 +205,7 @@ export function TransportControls({
         <div className="flex items-center justify-center gap-4 md:gap-2">
           {/* Tempo control */}
           <div className="flex items-center gap-2">
-            <label htmlFor="tempo-slider" className="text-xs text-white/50">
+            <label htmlFor="tempo-slider" className="text-xs text-text-muted">
               Tempo
             </label>
             <input
@@ -217,9 +217,9 @@ export function TransportControls({
               value={tempo}
               onChange={handleTempoChange}
               aria-label="Tempo"
-              className="w-20 h-1 accent-[#00ffc8] cursor-pointer"
+              className="w-20 h-1 accent-accent cursor-pointer"
             />
-            <span className="text-xs text-white/70 font-mono w-10 text-right">
+            <span className="text-xs text-text-secondary font-mono w-10 text-right">
               {tempo.toFixed(1)}s
             </span>
           </div>
@@ -229,7 +229,7 @@ export function TransportControls({
             <button
               onClick={handleMuteToggle}
               aria-label={isMuted ? "Unmute" : "Mute"}
-              className="min-h-11 min-w-11 flex items-center justify-center text-white/70 hover:text-white transition-colors md:min-h-0 md:min-w-0 md:p-1"
+              className="min-h-11 min-w-11 flex items-center justify-center text-text-secondary hover:text-foreground transition-colors md:min-h-0 md:min-w-0 md:p-1"
             >
               {isMuted || volume === 0 ? (
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
@@ -253,9 +253,9 @@ export function TransportControls({
               value={volume}
               onChange={handleVolumeChange}
               aria-label="Volume"
-              className="w-20 h-1 accent-[#00ffc8] cursor-pointer"
+              className="w-20 h-1 accent-accent cursor-pointer"
             />
-            <span className="text-xs text-white/70 font-mono w-10 text-right">
+            <span className="text-xs text-text-secondary font-mono w-10 text-right">
               {Math.round(volume * 100)}%
             </span>
           </div>

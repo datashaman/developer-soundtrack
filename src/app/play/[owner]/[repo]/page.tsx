@@ -95,13 +95,13 @@ export default function PlayerPage() {
   const activeLanguages = Array.from(new Set(commits.map((c) => c.primaryLanguage)));
 
   return (
-    <div className="min-h-screen bg-[#0a0a0e] text-white md:pb-0 pb-14">
+    <div className="min-h-screen bg-background text-foreground md:pb-0 pb-14">
       {/* Header bar */}
       <header className="mx-auto max-w-4xl px-4 pt-4 pb-3 md:pt-6 md:pb-4 flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
           <Link
             href="/"
-            className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 flex items-center justify-center text-white/40 hover:text-white/70 transition-colors shrink-0"
+            className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 flex items-center justify-center text-text-faint hover:text-text-secondary transition-colors shrink-0"
             aria-label="Back to dashboard"
           >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
@@ -109,10 +109,10 @@ export default function PlayerPage() {
             </svg>
           </Link>
           <div className="min-w-0">
-            <h1 className="text-base md:text-lg font-bold tracking-tight text-[#00ffc8] font-mono truncate">
+            <h1 className="text-base md:text-lg font-bold tracking-tight text-accent font-mono truncate">
               {fullName}
             </h1>
-            <p className="text-xs text-white/40 font-mono">
+            <p className="text-xs text-text-faint font-mono">
               {isLoading
                 ? "Loading commits..."
                 : `${commits.length} commits · ${formatDateRange(from, to, range)}`}
@@ -121,7 +121,7 @@ export default function PlayerPage() {
         </div>
         <Link
           href="/settings"
-          className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 md:p-2 flex items-center justify-center rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+          className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 md:p-2 flex items-center justify-center rounded-lg text-text-faint hover:text-foreground hover:bg-progress-bg transition-colors shrink-0"
           aria-label="Settings"
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
@@ -138,8 +138,8 @@ export default function PlayerPage() {
         {/* Loading state */}
         {isLoading && commits.length === 0 && (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
-            <div className="h-8 w-8 border-2 border-[#00ffc8] border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm text-white/40 font-mono">Loading commits...</p>
+            <div className="h-8 w-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-text-faint font-mono">Loading commits...</p>
           </div>
         )}
 
@@ -153,14 +153,14 @@ export default function PlayerPage() {
         {/* Empty state */}
         {!isLoading && !error && commits.length === 0 && (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
-            <svg width="48" height="48" viewBox="0 0 48 48" className="text-white/20">
+            <svg width="48" height="48" viewBox="0 0 48 48" className="text-text-dim">
               <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="2" fill="none" />
               <path d="M16 24h16M24 16v16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
-            <p className="text-sm text-white/40 font-mono">No commits found in this time range</p>
+            <p className="text-sm text-text-faint font-mono">No commits found in this time range</p>
             <Link
               href="/"
-              className="text-sm text-[#00ffc8] hover:underline font-mono"
+              className="text-sm text-accent hover:underline font-mono"
             >
               Back to dashboard
             </Link>
@@ -171,7 +171,7 @@ export default function PlayerPage() {
         {commits.length > 0 && (
           <div className="flex flex-col gap-4 md:gap-6">
             {/* Waveform Visualizer */}
-            <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] overflow-hidden">
+            <div className="rounded-xl bg-surface border border-border-subtle overflow-hidden">
               <WaveformVisualizer
                 getWaveformData={getWaveformData}
                 isPlaying={isPlaying}
@@ -180,7 +180,7 @@ export default function PlayerPage() {
             </div>
 
             {/* Transport Controls */}
-            <div className="rounded-xl bg-white/[0.03] border border-white/[0.06]">
+            <div className="rounded-xl bg-surface border border-border-subtle">
               <TransportControls
                 isPlaying={isPlaying}
                 currentIndex={currentIndex}

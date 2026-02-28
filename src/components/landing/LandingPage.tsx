@@ -5,20 +5,20 @@ import { TestPlayer } from "@/components/player/TestPlayer";
 
 export function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#0a0a0e] text-white">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Hero Section */}
       <header className="mx-auto max-w-4xl px-4 pt-10 pb-8 md:pt-16 md:pb-12 text-center">
         <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight font-[family-name:var(--font-space-grotesk)] mb-4">
-          <span className="text-[#00ffc8]">Developer</span> Soundtrack
+          <span className="text-accent">Developer</span> Soundtrack
         </h1>
-        <p className="text-base sm:text-lg md:text-xl text-white/60 max-w-2xl mx-auto leading-relaxed font-[family-name:var(--font-space-grotesk)]">
+        <p className="text-base sm:text-lg md:text-xl text-text-muted max-w-2xl mx-auto leading-relaxed font-[family-name:var(--font-space-grotesk)]">
           Transform your commit history into generative, listenable music.
           Every commit becomes a note — shaped by language, diff size, CI status,
           and author.
         </p>
         <button
           onClick={() => signIn("github")}
-          className="mt-6 md:mt-8 inline-flex items-center gap-2 px-6 py-3 min-h-11 rounded-lg bg-[#00ffc8] hover:bg-[#00ddb0] text-black font-semibold text-sm transition-colors font-[family-name:var(--font-space-grotesk)]"
+          className="mt-6 md:mt-8 inline-flex items-center gap-2 px-6 py-3 min-h-11 rounded-lg bg-accent hover:bg-accent-hover text-background font-semibold text-sm transition-colors font-[family-name:var(--font-space-grotesk)]"
         >
           <svg
             className="h-5 w-5"
@@ -39,7 +39,7 @@ export function LandingPage() {
       {/* Demo Player */}
       <main className="mx-auto max-w-4xl px-4 pb-16">
         <div className="mb-6 text-center">
-          <h2 className="text-sm font-mono text-white/40 uppercase tracking-widest">
+          <h2 className="text-sm font-mono text-text-faint uppercase tracking-widest">
             Live Demo
           </h2>
         </div>

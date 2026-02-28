@@ -3,11 +3,85 @@
 :root {
   --background: #0a0a0e;
   --foreground: #ededed;
+  --accent: #00ffc8;
+  --accent-hover: #00ddb0;
+  --surface: rgba(255, 255, 255, 0.02);
+  --surface-hover: rgba(255, 255, 255, 0.05);
+  --surface-active: rgba(255, 255, 255, 0.06);
+  --border: rgba(255, 255, 255, 0.06);
+  --border-strong: rgba(255, 255, 255, 0.1);
+  --text-primary: rgba(255, 255, 255, 0.9);
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --text-muted: rgba(255, 255, 255, 0.5);
+  --text-faint: rgba(255, 255, 255, 0.4);
+  --text-ghost: rgba(255, 255, 255, 0.3);
+  --text-dim: rgba(255, 255, 255, 0.2);
+  --input-bg: rgba(255, 255, 255, 0.05);
+  --tooltip-bg: #1a1a2e;
+  --timeline-line: rgba(255, 255, 255, 0.08);
+  --btn-secondary-bg: rgb(39, 39, 42);
+  --btn-secondary-hover: rgb(63, 63, 70);
+  --btn-secondary-text: rgb(228, 228, 231);
+  --list-hover: rgba(255, 255, 255, 0.04);
+  --list-border: rgba(255, 255, 255, 0.03);
+  --progress-bg: rgba(255, 255, 255, 0.1);
+  --option-bg: #0a0a0e;
+}
+
+.light {
+  --background: #f8f8fa;
+  --foreground: #1a1a2e;
+  --accent: #009e7e;
+  --accent-hover: #00836a;
+  --surface: rgba(0, 0, 0, 0.03);
+  --surface-hover: rgba(0, 0, 0, 0.06);
+  --surface-active: rgba(0, 0, 0, 0.08);
+  --border: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.15);
+  --text-primary: rgba(0, 0, 0, 0.9);
+  --text-secondary: rgba(0, 0, 0, 0.7);
+  --text-muted: rgba(0, 0, 0, 0.5);
+  --text-faint: rgba(0, 0, 0, 0.4);
+  --text-ghost: rgba(0, 0, 0, 0.3);
+  --text-dim: rgba(0, 0, 0, 0.2);
+  --input-bg: rgba(0, 0, 0, 0.05);
+  --tooltip-bg: #ffffff;
+  --timeline-line: rgba(0, 0, 0, 0.1);
+  --btn-secondary-bg: rgb(229, 231, 235);
+  --btn-secondary-hover: rgb(209, 213, 219);
+  --btn-secondary-text: rgb(31, 41, 55);
+  --list-hover: rgba(0, 0, 0, 0.04);
+  --list-border: rgba(0, 0, 0, 0.06);
+  --progress-bg: rgba(0, 0, 0, 0.1);
+  --option-bg: #f8f8fa;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-active: var(--surface-active);
+  --color-border-subtle: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-faint: var(--text-faint);
+  --color-text-ghost: var(--text-ghost);
+  --color-text-dim: var(--text-dim);
+  --color-input-bg: var(--input-bg);
+  --color-tooltip-bg: var(--tooltip-bg);
+  --color-timeline-line: var(--timeline-line);
+  --color-btn-secondary-bg: var(--btn-secondary-bg);
+  --color-btn-secondary-hover: var(--btn-secondary-hover);
+  --color-btn-secondary-text: var(--btn-secondary-text);
+  --color-list-hover: var(--list-hover);
+  --color-list-border: var(--list-border);
+  --color-progress-bg: var(--progress-bg);
+  --color-option-bg: var(--option-bg);
   --font-sans: var(--font-space-grotesk);
   --font-mono: var(--font-jetbrains-mono);
 }
@@ -16,4 +90,15 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-space-grotesk), Arial, Helvetica, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Smooth transitions for theme changes */
+*, *::before, *::after {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.15s ease;
+}
+
+/* Opt out of transitions for elements that animate frequently */
+canvas, svg, [data-no-transition] {
+  transition: none !important;
 }

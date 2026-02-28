@@ -41,7 +41,7 @@ export function LanguageIcon({
         style={{ backgroundColor: color, width: size, height: size }}
         aria-label={`${language} language`}
       />
-      {showLabel && <span className="text-white/70">{language}</span>}
+      {showLabel && <span className="text-text-secondary">{language}</span>}
     </span>
   );
 }

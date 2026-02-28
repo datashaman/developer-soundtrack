@@ -143,16 +143,16 @@ export function Dashboard() {
   );
 
   return (
-    <div className="min-h-screen bg-[#0a0a0e] text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <header className="mx-auto max-w-3xl px-4 pt-8 pb-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold tracking-tight text-[#00ffc8] font-mono">
+        <h1 className="text-xl font-bold tracking-tight text-accent font-mono">
           Developer Soundtrack
         </h1>
         <AuthButton />
       </header>
 
       <main className="mx-auto max-w-3xl px-4 py-8">
-        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6 space-y-6">
+        <div className="rounded-xl border border-border-strong bg-surface p-6 space-y-6">
           <RepoSelector value={selectedRepo} onChange={setSelectedRepo} />
 
           <DateRangePicker
@@ -167,7 +167,7 @@ export function Dashboard() {
           <button
             onClick={handlePlay}
             disabled={!selectedRepo}
-            className="w-full rounded-lg bg-[#00ffc8] hover:bg-[#00ddb0] disabled:bg-white/10 disabled:text-white/30 text-black font-semibold py-3 min-h-11 text-sm transition-colors disabled:cursor-not-allowed"
+            className="w-full rounded-lg bg-accent hover:bg-accent-hover disabled:bg-progress-bg disabled:text-text-ghost text-background font-semibold py-3 min-h-11 text-sm transition-colors disabled:cursor-not-allowed"
           >
             {selectedRepo ? "Play Soundtrack" : "Select a repository to begin"}
           </button>
@@ -176,7 +176,7 @@ export function Dashboard() {
         {/* Recent Sessions */}
         {recentSessions.length > 0 && (
           <div className="mt-8">
-            <h2 className="text-xs text-white/40 uppercase tracking-widest font-mono mb-3">
+            <h2 className="text-xs text-text-faint uppercase tracking-widest font-mono mb-3">
               Recent Sessions
             </h2>
             <div className="space-y-2">
@@ -184,17 +184,17 @@ export function Dashboard() {
                 <button
                   key={`${session.repo}-${session.playedAt}-${index}`}
                   onClick={() => handleRecentClick(session)}
-                  className="w-full text-left rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] px-4 py-3 min-h-11 transition-colors group"
+                  className="w-full text-left rounded-lg border border-border-subtle bg-surface hover:bg-surface-hover px-4 py-3 min-h-11 transition-colors group"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-mono text-white/80 group-hover:text-[#00ffc8] transition-colors">
+                    <span className="text-sm font-mono text-text-primary group-hover:text-accent transition-colors">
                       {session.repo}
                     </span>
-                    <span className="text-xs text-white/30 font-mono">
+                    <span className="text-xs text-text-ghost font-mono">
                       {formatTimeAgo(session.playedAt)}
                     </span>
                   </div>
-                  <div className="text-xs text-white/40 mt-1 font-mono">
+                  <div className="text-xs text-text-faint mt-1 font-mono">
                     {formatPreset(session.preset, session.customFrom, session.customTo)}
                     {session.commitCount !== null && ` · ${session.commitCount} commits`}
                   </div>

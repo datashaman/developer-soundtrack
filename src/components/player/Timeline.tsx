@@ -29,6 +29,14 @@ const CENTER_Y = SVG_HEIGHT / 2;
 /** Virtualization buffer (extra nodes to render outside visible area) */
 const VIRTUALIZATION_BUFFER = 20;
 
+function getTimelineLineColor(): string {
+  return getComputedStyle(document.documentElement).getPropertyValue("--timeline-line").trim() || "rgba(255,255,255,0.08)";
+}
+
+function getForegroundColor(): string {
+  return getComputedStyle(document.documentElement).getPropertyValue("--foreground").trim() || "white";
+}
+
 export function Timeline({ commits, currentCommitId, onSeek }: TimelineProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -104,6 +112,10 @@ export function Timeline({ commits, currentCommitId, onSeek }: TimelineProps) {
     const [startIdx, endIdx] = renderRange;
     const visibleCommits = commits.slice(startIdx, endIdx + 1);
 
+    // Read theme-aware colors from CSS variables
+    const lineColor = getTimelineLineColor();
+    const activeStroke = getForegroundColor();
+
     // Draw connecting lines between visible nodes
     if (visibleCommits.length > 1) {
       const lineStartX = PADDING + startIdx * NODE_SPACING;
@@ -115,7 +127,7 @@ export function Timeline({ commits, currentCommitId, onSeek }: TimelineProps) {
         .attr("y1", CENTER_Y)
         .attr("x2", lineEndX)
         .attr("y2", CENTER_Y)
-        .attr("stroke", "rgba(255,255,255,0.08)")
+        .attr("stroke", lineColor)
         .attr("stroke-width", 1);
     }
 
@@ -137,7 +149,7 @@ export function Timeline({ commits, currentCommitId, onSeek }: TimelineProps) {
       .attr("r", (d) => getNodeSize(d) / 2)
       .attr("fill", (d) => LANGUAGE_COLORS[d.primaryLanguage] ?? LANGUAGE_COLORS.Other)
       .attr("opacity", (d) => (d.id === currentCommitId ? 1 : 0.6))
-      .attr("stroke", (d) => (d.id === currentCommitId ? "white" : "transparent"))
+      .attr("stroke", (d) => (d.id === currentCommitId ? activeStroke : "transparent"))
       .attr("stroke-width", 2)
       .attr("cursor", "pointer");
 
@@ -168,7 +180,7 @@ export function Timeline({ commits, currentCommitId, onSeek }: TimelineProps) {
   if (commits.length === 0) return null;
 
   return (
-    <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] relative">
+    <div className="rounded-xl bg-surface border border-border-subtle relative">
       <div
         ref={containerRef}
         className="overflow-x-auto py-2"
@@ -186,7 +198,7 @@ export function Timeline({ commits, currentCommitId, onSeek }: TimelineProps) {
       {/* Hover tooltip */}
       {tooltip && (
         <div
-          className="absolute z-10 pointer-events-none bg-[#1a1a2e] border border-white/10 rounded-lg px-3 py-2 text-xs font-mono shadow-lg"
+          className="absolute z-10 pointer-events-none bg-tooltip-bg border border-border-strong rounded-lg px-3 py-2 text-xs font-mono shadow-lg"
           style={{
             left: tooltip.x,
             top: 0,
@@ -195,11 +207,11 @@ export function Timeline({ commits, currentCommitId, onSeek }: TimelineProps) {
           }}
           data-testid="timeline-tooltip"
         >
-          <p className="text-white/90 font-semibold truncate">
+          <p className="text-text-primary font-semibold truncate">
             {tooltip.commit.author}
           </p>
-          <p className="text-white/60 truncate">{tooltip.commit.message}</p>
-          <p className="text-white/40 mt-1">
+          <p className="text-text-muted truncate">{tooltip.commit.message}</p>
+          <p className="text-text-faint mt-1">
             {new Date(tooltip.commit.timestamp).toLocaleString()} &middot;{" "}
             <DiffStats
               additions={tooltip.commit.stats.additions}

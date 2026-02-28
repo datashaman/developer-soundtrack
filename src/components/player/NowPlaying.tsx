@@ -15,8 +15,8 @@ export function NowPlaying({ currentCommit, compact = false }: NowPlayingProps) 
   if (!currentCommit) {
     if (compact) return null;
     return (
-      <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-5">
-        <p className="text-sm text-white/30 text-center font-mono">
+      <div className="rounded-xl bg-surface border border-border-subtle p-5">
+        <p className="text-sm text-text-ghost text-center font-mono">
           Press play to start the soundtrack
         </p>
       </div>
@@ -27,7 +27,7 @@ export function NowPlaying({ currentCommit, compact = false }: NowPlayingProps) 
     return (
       <div
         key={currentCommit.id}
-        className="bg-[#0a0a0e] border-t border-white/[0.06] px-4 py-2 animate-[nowPlayingIn_0.3s_ease-out]"
+        className="bg-background border-t border-border-subtle px-4 py-2 animate-[nowPlayingIn_0.3s_ease-out]"
       >
         <style>{`
           @keyframes nowPlayingIn {
@@ -36,14 +36,14 @@ export function NowPlaying({ currentCommit, compact = false }: NowPlayingProps) 
           }
         `}</style>
         <div className="flex items-center gap-3 min-w-0">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-mono font-bold text-[#00ffc8]">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-progress-bg text-xs font-mono font-bold text-accent">
             {currentCommit.author.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-mono text-white/80 truncate">
+            <p className="text-xs font-mono text-text-primary truncate">
               <span className="font-semibold">{currentCommit.author}</span>
-              <span className="text-white/40 mx-1.5">&middot;</span>
-              <span className="text-white/50">{currentCommit.message}</span>
+              <span className="text-text-faint mx-1.5">&middot;</span>
+              <span className="text-text-muted">{currentCommit.message}</span>
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -58,7 +58,7 @@ export function NowPlaying({ currentCommit, compact = false }: NowPlayingProps) 
   return (
     <div
       key={currentCommit.id}
-      className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-5 animate-[nowPlayingIn_0.3s_ease-out]"
+      className="rounded-xl bg-surface border border-border-subtle p-5 animate-[nowPlayingIn_0.3s_ease-out]"
     >
       <style>{`
         @keyframes nowPlayingIn {
@@ -70,14 +70,14 @@ export function NowPlaying({ currentCommit, compact = false }: NowPlayingProps) 
       <div className="flex flex-col gap-3">
         {/* Author + message */}
         <div className="flex items-start gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-mono font-bold text-[#00ffc8]">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-progress-bg text-sm font-mono font-bold text-accent">
             {currentCommit.author.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-mono font-semibold text-white/90">
+            <p className="text-sm font-mono font-semibold text-text-primary">
               {currentCommit.author}
             </p>
-            <p className="text-sm text-white/60 line-clamp-2">
+            <p className="text-sm text-text-muted line-clamp-2">
               {currentCommit.message}
             </p>
           </div>
@@ -96,7 +96,7 @@ export function NowPlaying({ currentCommit, compact = false }: NowPlayingProps) 
         </div>
 
         {/* Musical info */}
-        <div className="text-xs font-mono text-white/40">
+        <div className="text-xs font-mono text-text-faint">
           {currentCommit.musicalParams.instrument} &rarr;{" "}
           {currentCommit.musicalParams.note}{" "}
           {currentCommit.musicalParams.scale},{" "}
