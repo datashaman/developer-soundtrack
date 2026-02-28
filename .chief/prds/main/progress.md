@@ -509,3 +509,28 @@
   - `line-clamp-2` Tailwind class truncates text to 2 lines with ellipsis — preferred over `truncate` (single line) for commit messages
   - NowPlaying is a presentational component (no hooks) — takes `currentCommit: Commit | null` as sole prop, making it easy to test and reuse
 ---
+
+## 2026-02-28 - US-029
+- Implemented `Timeline` component in `src/components/player/Timeline.tsx` using D3.js
+  - Horizontal timeline with circular commit nodes sized proportional to diff (min 8px, max 28px)
+  - Nodes colored by programming language using `LANGUAGE_COLORS` map
+  - Currently playing commit highlighted with 2px solid white border
+  - Thin connecting line between nodes (1px, rgba(255,255,255,0.08))
+  - Hover tooltip showing author, message, timestamp, and diff stats (+/-)
+  - Click on node calls `onSeek(index)` to navigate playback
+  - Auto-scrolls container to keep current commit centered during playback
+  - Horizontal scrolling via `overflow-x-auto` container
+  - Virtualization for >200 commits: tracks visible range via scroll listener, only renders nodes within visible area + buffer
+- Installed `d3` and `@types/d3` as dependencies
+- 17 unit tests in `Timeline.test.tsx` covering: empty state, SVG rendering, connecting line, node sizing, language colors, current commit highlighting, click-to-seek, hover tooltip, tooltip hide, diff stats in tooltip, unknown language fallback, scroll container, SVG width, auto-scroll, single commit (no line), virtualization (<=200 all rendered, >200 renders subset)
+- Integrated Timeline into player page (`src/app/play/[owner]/[repo]/page.tsx`) replacing inline placeholder
+- Integrated Timeline into `TestPlayer.tsx` between NowPlaying card and commit list
+- Files changed: `src/components/player/Timeline.tsx`, `src/components/player/Timeline.test.tsx`, `src/app/play/[owner]/[repo]/page.tsx`, `src/components/player/TestPlayer.tsx`, `package.json`, `pnpm-lock.yaml`
+- **Learnings for future iterations:**
+  - D3.js works well with React via refs — use `d3.select(svgRef.current)` in `useEffect`, clear with `svg.selectAll("*").remove()` before re-rendering
+  - jsdom doesn't implement `Element.scrollTo` — guard with optional chaining (`el.scrollTo?.()`) in component, mock with `Element.prototype.scrollTo = vi.fn()` in tests
+  - Lint warning `react-hooks/exhaustive-deps` triggers for inline tuple/array values in useEffect deps — wrap with `useMemo` to stabilize identity
+  - D3 `selectAll().data().join()` pattern handles enter/update/exit automatically — cleaner than manual enter/exit
+  - Timeline component is presentational: takes `commits`, `currentCommitId`, and `onSeek` as props (no internal hooks for data fetching)
+  - `LANGUAGE_COLORS` map is duplicated across NowPlaying, TestPlayer, Timeline, and player page — consider extracting to shared module in future
+---

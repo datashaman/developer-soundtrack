@@ -486,7 +486,8 @@
         "Only shows languages present in the current commit set"
       ],
       "priority": 30,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-031",

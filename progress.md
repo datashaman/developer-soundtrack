@@ -43,3 +43,14 @@
   - Signal chain: masterVolume → waveformAnalyser → fftAnalyser → Destination
   - The `LANGUAGE_SYNTH_MAP` from synths.ts is reused for config lookup; the existing `getSynthForLanguage` cache is separate from the engine's chain cache
 ---
+
+## 2026-02-28 - US-030
+- What was implemented: InstrumentLegend component that shows active languages from current commits with their color swatch and Tone.js instrument name
+- Files changed:
+  - `src/components/player/InstrumentLegend.tsx` (created) — compact legend component using `LANGUAGE_SYNTH_MAP` for instrument names and local `LANGUAGE_COLORS` for color swatches
+  - `src/app/play/[owner]/[repo]/page.tsx` (updated) — replaced inline placeholder legend with `<InstrumentLegend>` component, removed unused `LANGUAGE_COLORS` constant
+- **Learnings for future iterations:**
+  - `LANGUAGE_COLORS` is duplicated in NowPlaying, Timeline, WaveformVisualizer, TestPlayer, and the player page — a future story could consolidate this into a shared constant
+  - The player page already computed `activeLanguages` for the placeholder; the InstrumentLegend accepts this as a prop
+  - `LANGUAGE_SYNTH_MAP` from `synths.ts` can be safely imported in client components since `tone` is a client-side library
+---
