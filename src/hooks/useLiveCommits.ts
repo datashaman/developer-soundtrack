@@ -45,32 +45,38 @@ export function useLiveCommits(repo: string | null): UseLiveCommitsReturn {
     channelRef.current = channel;
 
     channel.bind("commits", (commits: Commit[]) => {
+      console.log(`[Pusher] Received ${commits.length} commit(s) on ${channelName}`, commits);
       if (commits.length > 0) {
         setLatestCommit(commits[commits.length - 1]);
       }
     });
 
     channel.bind("pusher:subscription_succeeded", () => {
+      console.log(`[Pusher] Subscribed to ${channelName}`);
       setIsConnected(true);
       setError(null);
     });
 
     channel.bind("pusher:subscription_error", () => {
+      console.warn(`[Pusher] Subscription error on ${channelName}`);
       setIsConnected(false);
       setError("Failed to subscribe to live updates.");
     });
 
     pusher.connection.bind("connected", () => {
+      console.log("[Pusher] Connected");
       setIsConnected(true);
       setError(null);
     });
 
     pusher.connection.bind("error", () => {
+      console.warn("[Pusher] Connection error");
       setIsConnected(false);
       setError("Connection lost. Reconnecting...");
     });
 
     pusher.connection.bind("disconnected", () => {
+      console.warn("[Pusher] Disconnected");
       setIsConnected(false);
       setError("Connection lost. Reconnecting...");
     });

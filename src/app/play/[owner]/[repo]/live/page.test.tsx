@@ -115,8 +115,19 @@ describe("LivePlayerPage", () => {
     expect(getByTestId("live-indicator")).toBeTruthy();
   });
 
-  it("shows 'Waiting for commits...' when connected with no commits", () => {
+  it("shows 'enable audio' prompt when connected but audio not enabled", () => {
     const { getByTestId, getByText } = render(<LivePlayerPage />);
+    expect(getByTestId("enable-audio-state")).toBeTruthy();
+    expect(getByText("Tap to enable audio")).toBeTruthy();
+  });
+
+  it("shows 'Waiting for commits...' after enabling audio", async () => {
+    const { getByTestId, getByText, getByLabelText } = render(<LivePlayerPage />);
+
+    await act(async () => {
+      getByLabelText("Enable audio").click();
+    });
+
     expect(getByTestId("waiting-state")).toBeTruthy();
     expect(getByText("Waiting for commits...")).toBeTruthy();
   });
@@ -146,7 +157,36 @@ describe("LivePlayerPage", () => {
     expect(getByTestId("waveform-visualizer")).toBeTruthy();
   });
 
-  it("plays a commit immediately when received", async () => {
+  it("plays a commit immediately when received after audio enabled", async () => {
+    mockUseLiveCommits.mockReturnValue({
+      latestCommit: null,
+      isConnected: true,
+      error: null,
+    });
+
+    const { getByLabelText, rerender } = render(<LivePlayerPage />);
+
+    // Enable audio first
+    await act(async () => {
+      getByLabelText("Enable audio").click();
+    });
+
+    // Now a commit arrives
+    const commit = makeCommit();
+    mockUseLiveCommits.mockReturnValue({
+      latestCommit: commit,
+      isConnected: true,
+      error: null,
+    });
+
+    rerender(<LivePlayerPage />);
+
+    await waitFor(() => {
+      expect(mockPlay).toHaveBeenCalledWith([commit], 0);
+    });
+  });
+
+  it("does not auto-play commits before audio is enabled", async () => {
     const commit = makeCommit();
     mockUseLiveCommits.mockReturnValue({
       latestCommit: commit,
@@ -156,8 +196,13 @@ describe("LivePlayerPage", () => {
 
     render(<LivePlayerPage />);
 
+    // play should only be called for the enableAudio gesture, not for the commit
     await waitFor(() => {
-      expect(mockPlay).toHaveBeenCalledWith([commit], 0);
+      // Should not have been called with the commit
+      const commitCalls = mockPlay.mock.calls.filter(
+        (call: [Commit[], number?]) => call[0].length > 0
+      );
+      expect(commitCalls).toHaveLength(0);
     });
   });
 
