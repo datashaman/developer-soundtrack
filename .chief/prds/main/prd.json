@@ -784,7 +784,8 @@
         "MusicEngine handles large commit arrays without memory issues"
       ],
       "priority": 49,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-050",
@@ -801,7 +802,8 @@
         "Test runner configured (Jest or Vitest) and passing in CI-compatible manner"
       ],
       "priority": 50,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     }
   ]
 }

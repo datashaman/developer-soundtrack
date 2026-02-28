@@ -15,6 +15,7 @@ interface UseCommitsReturn {
   isLoading: boolean;
   error: string | null;
   hasMore: boolean;
+  total: number | null;
   rateLimitRemaining: number | null;
   loadMore: () => void;
   retry: () => void;
@@ -30,6 +31,7 @@ export function useCommits({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
+  const [total, setTotal] = useState<number | null>(null);
   const [rateLimitRemaining, setRateLimitRemaining] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -65,6 +67,7 @@ export function useCommits({
         if (!controller.signal.aborted) {
           setCommits((prev) => (append ? [...prev, ...data.commits] : data.commits));
           setHasMore(data.hasMore);
+          setTotal(data.total ?? null);
           setPage(pageNum);
           if (data.rateLimitRemaining != null) {
             setRateLimitRemaining(data.rateLimitRemaining);
@@ -90,6 +93,7 @@ export function useCommits({
     if (!repo) {
       setCommits([]);
       setHasMore(false);
+      setTotal(null);
       setError(null);
       return;
     }
@@ -113,5 +117,5 @@ export function useCommits({
     }
   }, [repo, fetchPage]);
 
-  return { commits, isLoading, error, hasMore, rateLimitRemaining, loadMore, retry };
+  return { commits, isLoading, error, hasMore, total, rateLimitRemaining, loadMore, retry };
 }

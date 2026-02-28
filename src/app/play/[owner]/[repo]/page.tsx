@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useCommits } from "@/hooks/useCommits";
@@ -38,11 +38,18 @@ export default function PlayerPage() {
   const to = searchParams.get("to");
   const range = searchParams.get("range");
 
-  const { commits, isLoading, error, rateLimitRemaining, retry } = useCommits({
+  const { commits, isLoading, error, hasMore, total, rateLimitRemaining, loadMore, retry } = useCommits({
     repo: fullName,
     from: from ?? undefined,
     to: to ?? undefined,
   });
+
+  // Sample commits for large repos (every Nth commit)
+  const [sampleEvery, setSampleEvery] = useState<1 | 2 | 5 | 10>(1);
+  const displayCommits = useMemo(() => {
+    if (sampleEvery === 1) return commits;
+    return commits.filter((_, i) => i % sampleEvery === 0);
+  }, [commits, sampleEvery]);
 
   const {
     isPlaying,
@@ -82,8 +89,8 @@ export default function PlayerPage() {
   const hasStartedRef = useRef(false);
   const commitsRef = useRef<Commit[]>([]);
   useEffect(() => {
-    commitsRef.current = commits;
-  }, [commits]);
+    commitsRef.current = displayCommits;
+  }, [displayCommits]);
 
   const handlePlay = useCallback(async () => {
     if (commitsRef.current.length === 0) return;
@@ -113,8 +120,25 @@ export default function PlayerPage() {
     [play, seekTo],
   );
 
+  // Reset sampling when commits change significantly
+  useEffect(() => {
+    if (commits.length <= 200 && sampleEvery !== 1) {
+      setSampleEvery(1);
+    }
+  }, [commits.length, sampleEvery]);
+
+  // Stop playback when sample rate changes (commit list changes)
+  const sampleEveryRef = useRef(sampleEvery);
+  useEffect(() => {
+    if (sampleEveryRef.current !== sampleEvery) {
+      sampleEveryRef.current = sampleEvery;
+      stop();
+      hasStartedRef.current = false;
+    }
+  }, [sampleEvery, stop]);
+
   // Compute unique active languages for instrument legend
-  const activeLanguages = Array.from(new Set(commits.map((c) => c.primaryLanguage)));
+  const activeLanguages = Array.from(new Set(displayCommits.map((c) => c.primaryLanguage)));
 
   return (
     <div className="min-h-screen bg-background text-foreground md:pb-0 pb-14">
@@ -136,8 +160,10 @@ export default function PlayerPage() {
             </h1>
             <p className="text-xs text-text-faint font-mono">
               {isLoading
-                ? "Loading commits..."
-                : `${commits.length} commits · ${formatDateRange(from, to, range)}`}
+                ? total != null && total > 0
+                  ? `Loading ${total.toLocaleString()} commits...`
+                  : "Loading commits..."
+                : `${displayCommits.length}${sampleEvery > 1 ? ` of ${commits.length}` : ""} commits · ${formatDateRange(from, to, range)}`}
             </p>
           </div>
         </div>
@@ -164,7 +190,11 @@ export default function PlayerPage() {
         {isLoading && commits.length === 0 && (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
             <div className="h-8 w-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm text-text-faint font-mono">Loading commits...</p>
+            <p className="text-sm text-text-faint font-mono">
+              {total != null && total > 0
+                ? `Loading ${total.toLocaleString()} commits...`
+                : "Loading commits..."}
+            </p>
           </div>
         )}
 
@@ -218,6 +248,24 @@ export default function PlayerPage() {
         {/* Player content */}
         {commits.length > 0 && (
           <div className="flex flex-col gap-4 md:gap-6">
+            {/* Sample option for large repos */}
+            {commits.length > 200 && (
+              <div className="rounded-xl bg-surface border border-border-subtle p-3 flex flex-wrap items-center gap-3">
+                <span className="text-xs text-text-faint font-mono">Sample commits:</span>
+                <select
+                  value={sampleEvery}
+                  onChange={(e) => setSampleEvery(Number(e.target.value) as 1 | 2 | 5 | 10)}
+                  className="bg-background border border-border-subtle rounded px-2 py-1.5 text-sm font-mono text-foreground"
+                  aria-label="Sample every Nth commit"
+                >
+                  <option value={1}>All ({commits.length})</option>
+                  <option value={2}>Every 2nd (~{Math.ceil(commits.length / 2)})</option>
+                  <option value={5}>Every 5th (~{Math.ceil(commits.length / 5)})</option>
+                  <option value={10}>Every 10th (~{Math.ceil(commits.length / 10)})</option>
+                </select>
+              </div>
+            )}
+
             {/* Waveform Visualizer */}
             <div className="rounded-xl bg-surface border border-border-subtle overflow-hidden">
               <WaveformVisualizer
@@ -232,7 +280,7 @@ export default function PlayerPage() {
               <TransportControls
                 isPlaying={isPlaying}
                 currentIndex={currentIndex}
-                totalCommits={commits.length}
+                totalCommits={displayCommits.length}
                 onPlay={handlePlay}
                 onPause={pause}
                 onStop={handleStop}
@@ -250,7 +298,7 @@ export default function PlayerPage() {
             {/* Horizontal Timeline — hidden on mobile, shown on md+ */}
             <div className="hidden md:block">
               <Timeline
-                commits={commits}
+                commits={displayCommits}
                 currentCommitId={currentCommit?.id ?? null}
                 onSeek={handleSeek}
               />
@@ -264,7 +312,7 @@ export default function PlayerPage() {
             {/* Mobile: Vertical scrolling commit list replaces Timeline */}
             <div className="block md:hidden">
               <MobileCommitList
-                commits={commits}
+                commits={displayCommits}
                 currentCommitId={currentCommit?.id ?? null}
                 onSeek={handleSeek}
               />
@@ -272,12 +320,25 @@ export default function PlayerPage() {
 
             {/* Instrument Legend */}
             <InstrumentLegend activeLanguages={activeLanguages} />
+
+            {/* Load more for large repos */}
+            {hasMore && (
+              <div className="flex justify-center py-4">
+                <button
+                  onClick={loadMore}
+                  disabled={isLoading}
+                  className="min-h-11 px-4 rounded-lg bg-accent/10 border border-accent/30 text-accent hover:bg-accent/20 hover:border-accent/50 font-mono text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isLoading ? "Loading..." : `Load more (${commits.length}${total != null ? ` of ${total.toLocaleString()}` : ""} loaded)`}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </main>
 
       {/* Mobile: Compact now-playing bottom bar (fixed) */}
-      {commits.length > 0 && (
+      {displayCommits.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 z-20 md:hidden">
           <NowPlaying currentCommit={currentCommit} compact />
         </div>

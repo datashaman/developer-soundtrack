@@ -72,6 +72,7 @@ describe("useCommits", () => {
     expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBeNull();
     expect(result.current.hasMore).toBe(false);
+    expect(result.current.total).toBeNull();
     expect(typeof result.current.loadMore).toBe("function");
   });
 
@@ -111,6 +112,7 @@ describe("useCommits", () => {
 
     expect(result.current.commits).toEqual(commits);
     expect(result.current.hasMore).toBe(false);
+    expect(result.current.total).toBe(2);
     expect(result.current.error).toBeNull();
   });
 
@@ -442,6 +444,7 @@ describe("useCommits", () => {
 
     expect(result.current.commits).toEqual([]);
     expect(result.current.hasMore).toBe(false);
+    expect(result.current.total).toBeNull();
     expect(result.current.error).toBeNull();
   });
 

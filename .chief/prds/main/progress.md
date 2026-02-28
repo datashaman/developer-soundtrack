@@ -879,3 +879,33 @@
   - `metadataBase` should be set from env var (`NEXTAUTH_URL`) to generate correct absolute URLs for OG images in production
   - `.next/dev/types/validator.ts` can get stale — delete `.next/dev/types/` to regenerate when seeing type errors in auto-generated files
 ---
+
+## 2026-02-28 - US-049
+- Implemented large repo handling with four enhancements:
+  - **useCommits total**: Added `total` to useCommits return value (parsed from API response) — enables progress display during fetches
+  - **Progress indicator**: Loading state shows "Loading X commits..." when total is known (e.g. "Loading 1,204 commits...")
+  - **Load more button**: When `hasMore` is true, displays "Load more (X of Y loaded)" button at bottom of player content
+  - **Sampling option**: When commits.length > 200, adds "Sample commits" dropdown: All, Every 2nd, Every 5th, Every 10th — reduces played/displayed commits for large ranges
+  - Sampling uses `displayCommits = commits.filter((_, i) => i % sampleEvery === 0)` — playback, timeline, and mobile list all use sampled list
+  - Stop playback when sample rate changes (avoids index mismatch)
+  - Timeline already had virtualization for >200 commits (from US-029); API already paginates (100 per page)
+- Files changed: `src/hooks/useCommits.ts`, `src/hooks/useCommits.test.tsx`, `src/app/play/[owner]/[repo]/page.tsx`
+- **Learnings for future iterations:**
+  - Cache on miss fetches all pages server-side, then returns requested page — client still gets paginated response with total and hasMore
+  - Sampling dropdown only shown when commits.length > 200 — keeps UI clean for normal repos
+  - `sampleEvery` state reset to 1 when commits drop below 200 (e.g. date range change)
+---
+
+## 2026-02-28 - US-050
+- Verified and marked US-050 as complete — all acceptance criteria already satisfied by prior iterations:
+  - **Scale tests**: `src/lib/music/scales.test.ts` — all three scales, octave wrapping, edge cases
+  - **Mapping tests**: `src/lib/music/mapping.test.ts` — commit → musical params, all parameters, determinism, edge cases
+  - **Hash/motif tests**: `src/lib/utils/hash.test.ts`, `src/lib/music/motifs.test.ts` — pan, motif, color, determinism
+  - **Language tests**: `src/lib/github/languages.test.ts` — file extension → language, edge cases
+  - **Date range tests**: `src/lib/utils/time.test.ts` — presets, edge cases
+  - Test runner: Vitest, `pnpm test`, CI-compatible
+  - 553 tests passing, typecheck clean
+- No code changes; prd.json updated to passes: true
+- **Learnings for future iterations:**
+  - US-050 was effectively completed incrementally as each related user story was implemented
+---
