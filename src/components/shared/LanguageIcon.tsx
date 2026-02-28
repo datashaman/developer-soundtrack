@@ -6,6 +6,7 @@ export const LANGUAGE_COLORS: Record<string, string> = {
   Rust: "#dea584",
   Go: "#00ADD8",
   Java: "#b07219",
+  PHP: "#4F5D95",
   C: "#555555",
   "C++": "#f34b7d",
   Ruby: "#701516",

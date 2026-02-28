@@ -70,6 +70,13 @@ export const LANGUAGE_SYNTH_MAP: Record<string, SynthConfig> = {
       envelope: { attack: 0.03, decay: 0.3, sustain: 0.5, release: 0.7 },
     },
   },
+  PHP: {
+    type: "AMSynth",
+    options: {
+      oscillator: { type: "sine" },
+      envelope: { attack: 0.04, decay: 0.25, sustain: 0.5, release: 0.6 },
+    },
+  },
   C: {
     type: "MonoSynth",
     options: {

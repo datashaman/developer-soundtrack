@@ -34,6 +34,11 @@ export const EXTENSION_LANGUAGE_MAP: Record<string, string> = {
   // Java
   java: "Java",
 
+  // PHP
+  php: "PHP",
+  phtml: "PHP",
+  phar: "PHP",
+
   // C
   c: "C",
   h: "C",
