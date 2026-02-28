@@ -447,3 +447,22 @@
   - The landing page is a client component (needs `signIn` from next-auth/react) but the page route is a server component — this hybrid pattern works because the client component is imported and rendered by the server component
   - `LandingPage` reuses `TestPlayer` as the demo player — no duplication of sample commit data or player logic
 ---
+
+## 2026-02-28 - US-026
+- Implemented authenticated dashboard at `/` with three new components in `src/components/dashboard/`:
+  - **RepoSelector** (`RepoSelector.tsx`): Dropdown populated from `/api/repos` with loading and error states
+  - **DateRangePicker** (`DateRangePicker.tsx`): Preset buttons (Today, This Week, This Sprint, Custom) with custom date range inputs
+  - **Dashboard** (`Dashboard.tsx`): Main dashboard component with repo selector, date range picker, "Play Soundtrack" button, and recent sessions list
+- "Play" button navigates to `/play/[owner]/[repo]?range=...&from=...&to=...`
+- Recent sessions stored in localStorage (last 5 played soundtracks with repo, preset, and time ago display)
+- Date range computation: today (midnight to now), week (Monday to now), sprint (14 days ago to now), custom (user-specified dates)
+- Updated `src/app/page.tsx` to render `<Dashboard />` for authenticated users (replacing TestPlayer placeholder)
+- Fixed lint error: replaced `useEffect` + `setState` for loading localStorage with `useState` initializer function
+- Files changed: `src/components/dashboard/Dashboard.tsx`, `src/components/dashboard/DateRangePicker.tsx`, `src/components/dashboard/RepoSelector.tsx`, `src/app/page.tsx`, `.chief/prds/main/prd.json`
+- **Learnings for future iterations:**
+  - React lint rule `react-hooks/set-state-in-effect` forbids calling `setState` synchronously inside `useEffect` — use `useState(initializer)` instead for client-side-only data like localStorage
+  - Dashboard components follow same `"use client"` pattern as other UI components in the project
+  - Recent sessions use localStorage for simplicity — no API persistence needed for this data
+  - `getDateRange()` helper is defined in Dashboard component (not shared utility module) since it's only used here; US-043 will add a shared version later
+  - For `select` elements with dark theme, add `className="bg-[#0a0a0e]"` to `<option>` elements for consistent dropdown styling
+---

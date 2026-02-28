@@ -421,7 +421,8 @@
         "Loading states for repo list fetch"
       ],
       "priority": 26,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-027",
