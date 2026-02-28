@@ -3,14 +3,14 @@ import { isCacheStale } from "./cache";
 
 // Mock DB modules
 vi.mock("../db/commits", () => ({
-  getCommitsByRepo: vi.fn().mockReturnValue({ commits: [], total: 0 }),
-  createCommits: vi.fn(),
+  getCommitsByRepo: vi.fn().mockResolvedValue({ commits: [], total: 0 }),
+  createCommits: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("../db/repos", () => ({
-  getRepoByFullName: vi.fn().mockReturnValue(null),
-  createRepo: vi.fn().mockReturnValue({ id: "owner/repo", full_name: "owner/repo" }),
-  updateRepo: vi.fn(),
+  getRepoByFullName: vi.fn().mockResolvedValue(null),
+  createRepo: vi.fn().mockResolvedValue({ id: "owner/repo", full_name: "owner/repo" }),
+  updateRepo: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("./commits", () => ({
@@ -105,7 +105,7 @@ describe("isCacheStale", () => {
 describe("getCachedCommits", () => {
   it("returns cached data when cache is fresh", async () => {
     const commits = [makeCommit()];
-    vi.mocked(getRepoByFullName).mockReturnValue({
+    vi.mocked(getRepoByFullName).mockResolvedValue({
       id: "owner/repo",
       full_name: "owner/repo",
       description: null,
@@ -117,7 +117,7 @@ describe("getCachedCommits", () => {
       created_at: "2025-01-01T00:00:00Z",
       updated_at: "2025-01-01T00:00:00Z",
     });
-    vi.mocked(getCommitsByRepo).mockReturnValue({ commits, total: 1 });
+    vi.mocked(getCommitsByRepo).mockResolvedValue({ commits, total: 1 });
 
     const result = await getCachedCommits(mockOctokit, {
       repo: "owner/repo",
@@ -130,14 +130,14 @@ describe("getCachedCommits", () => {
   });
 
   it("fetches from GitHub when no repo in DB", async () => {
-    vi.mocked(getRepoByFullName).mockReturnValue(undefined);
+    vi.mocked(getRepoByFullName).mockResolvedValue(undefined);
     const commits = [makeCommit()];
     vi.mocked(fetchCommits).mockResolvedValue({
       commits,
       hasMore: false,
       rateLimitRemaining: 4999,
     });
-    vi.mocked(getCommitsByRepo).mockReturnValue({ commits, total: 1 });
+    vi.mocked(getCommitsByRepo).mockResolvedValue({ commits, total: 1 });
 
     const result = await getCachedCommits(mockOctokit, {
       repo: "owner/repo",
@@ -156,7 +156,7 @@ describe("getCachedCommits", () => {
   });
 
   it("fetches from GitHub when cache is stale", async () => {
-    vi.mocked(getRepoByFullName).mockReturnValue({
+    vi.mocked(getRepoByFullName).mockResolvedValue({
       id: "owner/repo",
       full_name: "owner/repo",
       description: null,
@@ -173,7 +173,7 @@ describe("getCachedCommits", () => {
       hasMore: false,
       rateLimitRemaining: 4999,
     });
-    vi.mocked(getCommitsByRepo).mockReturnValue({
+    vi.mocked(getCommitsByRepo).mockResolvedValue({
       commits: [makeCommit()],
       total: 1,
     });
@@ -192,7 +192,7 @@ describe("getCachedCommits", () => {
   });
 
   it("returns cached data for historical queries even with old fetch time", async () => {
-    vi.mocked(getRepoByFullName).mockReturnValue({
+    vi.mocked(getRepoByFullName).mockResolvedValue({
       id: "owner/repo",
       full_name: "owner/repo",
       description: null,
@@ -205,7 +205,7 @@ describe("getCachedCommits", () => {
       updated_at: "2025-01-01T00:00:00Z",
     });
     const commits = [makeCommit()];
-    vi.mocked(getCommitsByRepo).mockReturnValue({ commits, total: 1 });
+    vi.mocked(getCommitsByRepo).mockResolvedValue({ commits, total: 1 });
 
     const result = await getCachedCommits(mockOctokit, {
       repo: "owner/repo",
@@ -217,9 +217,9 @@ describe("getCachedCommits", () => {
   });
 
   it("paginates GitHub fetch to get all commits", async () => {
-    vi.mocked(getRepoByFullName).mockReturnValue(undefined);
+    vi.mocked(getRepoByFullName).mockResolvedValue(undefined);
     const page1Commits = Array.from({ length: 100 }, (_, i) =>
-      makeCommit({ id: `sha-page1-${i}` })
+      makeCommit({ id: `sha-page1-${i}` }),
     );
     const page2Commits = [makeCommit({ id: "sha-page2-0" })];
 
@@ -234,7 +234,7 @@ describe("getCachedCommits", () => {
         hasMore: false,
         rateLimitRemaining: 4898,
       });
-    vi.mocked(getCommitsByRepo).mockReturnValue({
+    vi.mocked(getCommitsByRepo).mockResolvedValue({
       commits: page1Commits.slice(0, 10),
       total: 101,
     });
@@ -247,18 +247,18 @@ describe("getCachedCommits", () => {
       expect.arrayContaining([
         expect.objectContaining({ id: "sha-page1-0" }),
         expect.objectContaining({ id: "sha-page2-0" }),
-      ])
+      ]),
     );
   });
 
   it("passes date range params to GitHub fetch", async () => {
-    vi.mocked(getRepoByFullName).mockReturnValue(undefined);
+    vi.mocked(getRepoByFullName).mockResolvedValue(undefined);
     vi.mocked(fetchCommits).mockResolvedValue({
       commits: [],
       hasMore: false,
       rateLimitRemaining: 4999,
     });
-    vi.mocked(getCommitsByRepo).mockReturnValue({ commits: [], total: 0 });
+    vi.mocked(getCommitsByRepo).mockResolvedValue({ commits: [], total: 0 });
 
     await getCachedCommits(mockOctokit, {
       repo: "owner/repo",
@@ -273,13 +273,13 @@ describe("getCachedCommits", () => {
   });
 
   it("does not call createCommits when no commits fetched", async () => {
-    vi.mocked(getRepoByFullName).mockReturnValue(undefined);
+    vi.mocked(getRepoByFullName).mockResolvedValue(undefined);
     vi.mocked(fetchCommits).mockResolvedValue({
       commits: [],
       hasMore: false,
       rateLimitRemaining: 4999,
     });
-    vi.mocked(getCommitsByRepo).mockReturnValue({ commits: [], total: 0 });
+    vi.mocked(getCommitsByRepo).mockResolvedValue({ commits: [], total: 0 });
 
     await getCachedCommits(mockOctokit, { repo: "owner/repo" });
 
@@ -287,7 +287,7 @@ describe("getCachedCommits", () => {
   });
 
   it("computes hasMore correctly based on page and total", async () => {
-    vi.mocked(getRepoByFullName).mockReturnValue({
+    vi.mocked(getRepoByFullName).mockResolvedValue({
       id: "owner/repo",
       full_name: "owner/repo",
       description: null,
@@ -299,7 +299,7 @@ describe("getCachedCommits", () => {
       created_at: "2025-01-01T00:00:00Z",
       updated_at: "2025-01-01T00:00:00Z",
     });
-    vi.mocked(getCommitsByRepo).mockReturnValue({
+    vi.mocked(getCommitsByRepo).mockResolvedValue({
       commits: [makeCommit()],
       total: 250,
     });
@@ -322,7 +322,7 @@ describe("getCachedCommits", () => {
   });
 
   it("returns correct page number in result", async () => {
-    vi.mocked(getRepoByFullName).mockReturnValue({
+    vi.mocked(getRepoByFullName).mockResolvedValue({
       id: "owner/repo",
       full_name: "owner/repo",
       description: null,
@@ -334,7 +334,7 @@ describe("getCachedCommits", () => {
       created_at: "2025-01-01T00:00:00Z",
       updated_at: "2025-01-01T00:00:00Z",
     });
-    vi.mocked(getCommitsByRepo).mockReturnValue({
+    vi.mocked(getCommitsByRepo).mockResolvedValue({
       commits: [],
       total: 50,
     });
@@ -347,7 +347,7 @@ describe("getCachedCommits", () => {
   });
 
   it("passes page and limit to DB query on cache hit", async () => {
-    vi.mocked(getRepoByFullName).mockReturnValue({
+    vi.mocked(getRepoByFullName).mockResolvedValue({
       id: "owner/repo",
       full_name: "owner/repo",
       description: null,
@@ -359,7 +359,7 @@ describe("getCachedCommits", () => {
       created_at: "2025-01-01T00:00:00Z",
       updated_at: "2025-01-01T00:00:00Z",
     });
-    vi.mocked(getCommitsByRepo).mockReturnValue({ commits: [], total: 0 });
+    vi.mocked(getCommitsByRepo).mockResolvedValue({ commits: [], total: 0 });
 
     await getCachedCommits(mockOctokit, {
       repo: "owner/repo",

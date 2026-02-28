@@ -1,4 +1,5 @@
-import { getDatabase } from "./index";
+import { getDatabase, ensureSchema } from "./index";
+import type { Row } from "@libsql/client";
 
 export interface RepoRow {
   id: string;
@@ -30,81 +31,114 @@ export interface UpdateRepoInput {
   lastFetchedAt?: string | null;
 }
 
-export function createRepo(input: CreateRepoInput): RepoRow {
+function rowToRepo(row: Row): RepoRow {
+  return {
+    id: row.id as string,
+    full_name: row.full_name as string,
+    description: row.description as string | null,
+    default_branch: row.default_branch as string,
+    language: row.language as string | null,
+    webhook_id: row.webhook_id as string | null,
+    webhook_secret: row.webhook_secret as string | null,
+    last_fetched_at: row.last_fetched_at as string | null,
+    created_at: row.created_at as string,
+    updated_at: row.updated_at as string,
+  };
+}
+
+export async function createRepo(input: CreateRepoInput): Promise<RepoRow> {
+  await ensureSchema();
   const db = getDatabase();
-  const stmt = db.prepare(`
-    INSERT INTO repos (id, full_name, description, default_branch, language)
-    VALUES (@id, @fullName, @description, @defaultBranch, @language)
-  `);
-  stmt.run({
-    id: input.id,
-    fullName: input.fullName,
-    description: input.description ?? null,
-    defaultBranch: input.defaultBranch ?? "main",
-    language: input.language ?? null,
+  await db.execute({
+    sql: `INSERT INTO repos (id, full_name, description, default_branch, language)
+          VALUES (?, ?, ?, ?, ?)`,
+    args: [
+      input.id,
+      input.fullName,
+      input.description ?? null,
+      input.defaultBranch ?? "main",
+      input.language ?? null,
+    ],
   });
-  return getRepoById(input.id)!;
+  return (await getRepoById(input.id))!;
 }
 
-export function getRepoById(id: string): RepoRow | undefined {
+export async function getRepoById(id: string): Promise<RepoRow | undefined> {
+  await ensureSchema();
   const db = getDatabase();
-  return db.prepare("SELECT * FROM repos WHERE id = ?").get(id) as
-    | RepoRow
-    | undefined;
+  const result = await db.execute({
+    sql: "SELECT * FROM repos WHERE id = ?",
+    args: [id],
+  });
+  return result.rows.length > 0 ? rowToRepo(result.rows[0]) : undefined;
 }
 
-export function getRepoByFullName(fullName: string): RepoRow | undefined {
+export async function getRepoByFullName(fullName: string): Promise<RepoRow | undefined> {
+  await ensureSchema();
   const db = getDatabase();
-  return db.prepare("SELECT * FROM repos WHERE full_name = ?").get(fullName) as
-    | RepoRow
-    | undefined;
+  const result = await db.execute({
+    sql: "SELECT * FROM repos WHERE full_name = ?",
+    args: [fullName],
+  });
+  return result.rows.length > 0 ? rowToRepo(result.rows[0]) : undefined;
 }
 
-export function getAllRepos(): RepoRow[] {
+export async function getAllRepos(): Promise<RepoRow[]> {
+  await ensureSchema();
   const db = getDatabase();
-  return db.prepare("SELECT * FROM repos ORDER BY updated_at DESC").all() as RepoRow[];
+  const result = await db.execute("SELECT * FROM repos ORDER BY updated_at DESC");
+  return result.rows.map(rowToRepo);
 }
 
-export function updateRepo(id: string, input: UpdateRepoInput): RepoRow | undefined {
+export async function updateRepo(id: string, input: UpdateRepoInput): Promise<RepoRow | undefined> {
+  await ensureSchema();
   const db = getDatabase();
   const fields: string[] = [];
-  const values: Record<string, unknown> = { id };
+  const values: (string | null)[] = [];
 
   if (input.description !== undefined) {
-    fields.push("description = @description");
-    values.description = input.description;
+    fields.push("description = ?");
+    values.push(input.description ?? null);
   }
   if (input.defaultBranch !== undefined) {
-    fields.push("default_branch = @defaultBranch");
-    values.defaultBranch = input.defaultBranch;
+    fields.push("default_branch = ?");
+    values.push(input.defaultBranch);
   }
   if (input.language !== undefined) {
-    fields.push("language = @language");
-    values.language = input.language;
+    fields.push("language = ?");
+    values.push(input.language ?? null);
   }
   if (input.webhookId !== undefined) {
-    fields.push("webhook_id = @webhookId");
-    values.webhookId = input.webhookId;
+    fields.push("webhook_id = ?");
+    values.push(input.webhookId ?? null);
   }
   if (input.webhookSecret !== undefined) {
-    fields.push("webhook_secret = @webhookSecret");
-    values.webhookSecret = input.webhookSecret;
+    fields.push("webhook_secret = ?");
+    values.push(input.webhookSecret ?? null);
   }
   if (input.lastFetchedAt !== undefined) {
-    fields.push("last_fetched_at = @lastFetchedAt");
-    values.lastFetchedAt = input.lastFetchedAt;
+    fields.push("last_fetched_at = ?");
+    values.push(input.lastFetchedAt ?? null);
   }
 
   if (fields.length === 0) return getRepoById(id);
 
   fields.push("updated_at = datetime('now')");
+  values.push(id);
 
-  db.prepare(`UPDATE repos SET ${fields.join(", ")} WHERE id = @id`).run(values);
+  await db.execute({
+    sql: `UPDATE repos SET ${fields.join(", ")} WHERE id = ?`,
+    args: values,
+  });
   return getRepoById(id);
 }
 
-export function deleteRepo(id: string): boolean {
+export async function deleteRepo(id: string): Promise<boolean> {
+  await ensureSchema();
   const db = getDatabase();
-  const result = db.prepare("DELETE FROM repos WHERE id = ?").run(id);
-  return result.changes > 0;
+  const result = await db.execute({
+    sql: "DELETE FROM repos WHERE id = ?",
+    args: [id],
+  });
+  return (result.rowsAffected ?? 0) > 0;
 }

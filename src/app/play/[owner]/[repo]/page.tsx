@@ -9,6 +9,7 @@ import { WaveformVisualizer } from "@/components/player/WaveformVisualizer";
 import { TransportControls } from "@/components/player/TransportControls";
 import { NowPlaying } from "@/components/player/NowPlaying";
 import { Timeline } from "@/components/player/Timeline";
+import { MobileCommitList } from "@/components/player/MobileCommitList";
 import { InstrumentLegend } from "@/components/player/InstrumentLegend";
 import type { Commit } from "@/types";
 
@@ -94,13 +95,13 @@ export default function PlayerPage() {
   const activeLanguages = Array.from(new Set(commits.map((c) => c.primaryLanguage)));
 
   return (
-    <div className="min-h-screen bg-[#0a0a0e] text-white">
+    <div className="min-h-screen bg-[#0a0a0e] text-white md:pb-0 pb-14">
       {/* Header bar */}
-      <header className="mx-auto max-w-4xl px-4 pt-6 pb-4 flex items-center justify-between">
+      <header className="mx-auto max-w-4xl px-4 pt-4 pb-3 md:pt-6 md:pb-4 flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
           <Link
             href="/"
-            className="text-white/40 hover:text-white/70 transition-colors shrink-0"
+            className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 flex items-center justify-center text-white/40 hover:text-white/70 transition-colors shrink-0"
             aria-label="Back to dashboard"
           >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
@@ -108,7 +109,7 @@ export default function PlayerPage() {
             </svg>
           </Link>
           <div className="min-w-0">
-            <h1 className="text-lg font-bold tracking-tight text-[#00ffc8] font-mono truncate">
+            <h1 className="text-base md:text-lg font-bold tracking-tight text-[#00ffc8] font-mono truncate">
               {fullName}
             </h1>
             <p className="text-xs text-white/40 font-mono">
@@ -120,7 +121,7 @@ export default function PlayerPage() {
         </div>
         <Link
           href="/settings"
-          className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+          className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 md:p-2 flex items-center justify-center rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors shrink-0"
           aria-label="Settings"
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
@@ -168,7 +169,7 @@ export default function PlayerPage() {
 
         {/* Player content */}
         {commits.length > 0 && (
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-4 md:gap-6">
             {/* Waveform Visualizer */}
             <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] overflow-hidden">
               <WaveformVisualizer
@@ -193,21 +194,46 @@ export default function PlayerPage() {
               />
             </div>
 
-            {/* Now Playing Card */}
-            <NowPlaying currentCommit={currentCommit} />
+            {/* Desktop: Now Playing above Timeline */}
+            <div className="hidden lg:block">
+              <NowPlaying currentCommit={currentCommit} />
+            </div>
 
-            {/* Timeline */}
-            <Timeline
-              commits={commits}
-              currentCommitId={currentCommit?.id ?? null}
-              onSeek={handleSeek}
-            />
+            {/* Horizontal Timeline — hidden on mobile, shown on md+ */}
+            <div className="hidden md:block">
+              <Timeline
+                commits={commits}
+                currentCommitId={currentCommit?.id ?? null}
+                onSeek={handleSeek}
+              />
+            </div>
+
+            {/* Tablet (md to lg): Now Playing stacks below Timeline */}
+            <div className="hidden md:block lg:hidden">
+              <NowPlaying currentCommit={currentCommit} />
+            </div>
+
+            {/* Mobile: Vertical scrolling commit list replaces Timeline */}
+            <div className="block md:hidden">
+              <MobileCommitList
+                commits={commits}
+                currentCommitId={currentCommit?.id ?? null}
+                onSeek={handleSeek}
+              />
+            </div>
 
             {/* Instrument Legend */}
             <InstrumentLegend activeLanguages={activeLanguages} />
           </div>
         )}
       </main>
+
+      {/* Mobile: Compact now-playing bottom bar (fixed) */}
+      {commits.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-20 md:hidden">
+          <NowPlaying currentCommit={currentCommit} compact />
+        </div>
+      )}
     </div>
   );
 }

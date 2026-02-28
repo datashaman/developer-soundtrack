@@ -53,7 +53,7 @@ export function TestPlayer() {
   );
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4 md:gap-6">
       {/* Waveform Visualizer */}
       <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] overflow-hidden">
         <WaveformVisualizer
@@ -81,12 +81,14 @@ export function TestPlayer() {
       {/* Current Commit Info */}
       <NowPlaying currentCommit={currentCommit} />
 
-      {/* Timeline */}
-      <Timeline
-        commits={SAMPLE_COMMITS}
-        currentCommitId={currentCommit?.id ?? null}
-        onSeek={handleSeek}
-      />
+      {/* Timeline — hidden on small mobile, shown on sm+ */}
+      <div className="hidden sm:block">
+        <Timeline
+          commits={SAMPLE_COMMITS}
+          currentCommitId={currentCommit?.id ?? null}
+          onSeek={handleSeek}
+        />
+      </div>
 
       {/* Commit list */}
       <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] overflow-hidden">
@@ -102,7 +104,7 @@ export function TestPlayer() {
               <button
                 key={commit.id}
                 onClick={() => handleSeek(idx)}
-                className={`w-full text-left px-4 py-2.5 flex items-center gap-3 hover:bg-white/[0.04] transition-colors border-b border-white/[0.03] last:border-b-0 ${
+                className={`w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-white/[0.04] transition-colors border-b border-white/[0.03] last:border-b-0 min-h-11 ${
                   isActive ? "bg-white/[0.06]" : ""
                 }`}
               >

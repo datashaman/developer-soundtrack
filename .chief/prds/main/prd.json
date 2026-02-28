@@ -516,7 +516,8 @@
         "Tailwind responsive classes used throughout"
       ],
       "priority": 32,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-033",

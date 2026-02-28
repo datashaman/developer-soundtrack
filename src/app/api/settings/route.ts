@@ -17,7 +17,7 @@ export async function GET() {
   }
 
   try {
-    const settings = getSettings(userId);
+    const settings = await getSettings(userId);
     return NextResponse.json({ settings });
   } catch (error: unknown) {
     const message =
@@ -58,9 +58,9 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
-    const current = getSettings(userId);
+    const current = await getSettings(userId);
     const merged = { ...current, ...(body as Record<string, unknown>), userId };
-    const settings = saveSettings(merged as Parameters<typeof saveSettings>[0]);
+    const settings = await saveSettings(merged as Parameters<typeof saveSettings>[0]);
     return NextResponse.json({ settings });
   } catch (error: unknown) {
     const message =

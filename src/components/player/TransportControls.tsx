@@ -136,16 +136,16 @@ export function TransportControls({
         />
       </div>
 
-      {/* Controls row */}
-      <div className="flex items-center justify-between gap-4">
+      {/* Controls — stacks on mobile, single row on md+ */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
         {/* Playback buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-center gap-1 md:justify-start md:gap-2">
           {/* Skip back */}
           <button
             onClick={handleSkipBack}
             disabled={currentIndex <= 0}
             aria-label="Skip backward"
-            className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            className="min-h-11 min-w-11 flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors md:min-h-0 md:min-w-0 md:p-2"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
               <path d="M3 2h2v12H3V2zm10 0L6 8l7 6V2z" />
@@ -156,7 +156,7 @@ export function TransportControls({
           <button
             onClick={handlePlayPause}
             aria-label={isPlaying ? "Pause" : "Play"}
-            className="p-3 rounded-full bg-[#00ffc8] text-[#0a0a0e] hover:bg-[#00e6b4] transition-colors"
+            className="min-h-11 min-w-11 flex items-center justify-center rounded-full bg-[#00ffc8] text-[#0a0a0e] hover:bg-[#00e6b4] transition-colors md:p-3"
           >
             {isPlaying ? (
               <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
@@ -174,7 +174,7 @@ export function TransportControls({
           <button
             onClick={handleStop}
             aria-label="Stop"
-            className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+            className="min-h-11 min-w-11 flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors md:min-h-0 md:min-w-0 md:p-2"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
               <rect x="3" y="3" width="10" height="10" rx="1" />
@@ -186,7 +186,7 @@ export function TransportControls({
             onClick={handleSkipForward}
             disabled={currentIndex >= totalCommits - 1}
             aria-label="Skip forward"
-            className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            className="min-h-11 min-w-11 flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors md:min-h-0 md:min-w-0 md:p-2"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
               <path d="M3 2l7 6-7 6V2zm8 0h2v12h-2V2z" />
@@ -201,61 +201,64 @@ export function TransportControls({
           </span>
         </div>
 
-        {/* Tempo control */}
-        <div className="flex items-center gap-2">
-          <label htmlFor="tempo-slider" className="text-xs text-white/50">
-            Tempo
-          </label>
-          <input
-            id="tempo-slider"
-            type="range"
-            min="0.3"
-            max="5.0"
-            step="0.1"
-            value={tempo}
-            onChange={handleTempoChange}
-            aria-label="Tempo"
-            className="w-20 h-1 accent-[#00ffc8] cursor-pointer"
-          />
-          <span className="text-xs text-white/70 font-mono w-10 text-right">
-            {tempo.toFixed(1)}s
-          </span>
-        </div>
+        {/* Tempo + Volume — side by side */}
+        <div className="flex items-center justify-center gap-4 md:gap-2">
+          {/* Tempo control */}
+          <div className="flex items-center gap-2">
+            <label htmlFor="tempo-slider" className="text-xs text-white/50">
+              Tempo
+            </label>
+            <input
+              id="tempo-slider"
+              type="range"
+              min="0.3"
+              max="5.0"
+              step="0.1"
+              value={tempo}
+              onChange={handleTempoChange}
+              aria-label="Tempo"
+              className="w-20 h-1 accent-[#00ffc8] cursor-pointer"
+            />
+            <span className="text-xs text-white/70 font-mono w-10 text-right">
+              {tempo.toFixed(1)}s
+            </span>
+          </div>
 
-        {/* Volume control */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleMuteToggle}
-            aria-label={isMuted ? "Unmute" : "Mute"}
-            className="p-1 text-white/70 hover:text-white transition-colors"
-          >
-            {isMuted || volume === 0 ? (
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M8 2L4 6H1v4h3l4 4V2z" />
-                <path d="M12.5 4.5l-5 7" stroke="currentColor" strokeWidth="1.5" fill="none" />
-              </svg>
-            ) : (
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M8 2L4 6H1v4h3l4 4V2z" />
-                <path d="M11 5.5c.8.8.8 2.2 0 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-                <path d="M13 3.5c1.6 1.6 1.6 4.4 0 6" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-              </svg>
-            )}
-          </button>
-          <input
-            id="volume-slider"
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={volume}
-            onChange={handleVolumeChange}
-            aria-label="Volume"
-            className="w-20 h-1 accent-[#00ffc8] cursor-pointer"
-          />
-          <span className="text-xs text-white/70 font-mono w-10 text-right">
-            {Math.round(volume * 100)}%
-          </span>
+          {/* Volume control */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleMuteToggle}
+              aria-label={isMuted ? "Unmute" : "Mute"}
+              className="min-h-11 min-w-11 flex items-center justify-center text-white/70 hover:text-white transition-colors md:min-h-0 md:min-w-0 md:p-1"
+            >
+              {isMuted || volume === 0 ? (
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M8 2L4 6H1v4h3l4 4V2z" />
+                  <path d="M12.5 4.5l-5 7" stroke="currentColor" strokeWidth="1.5" fill="none" />
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M8 2L4 6H1v4h3l4 4V2z" />
+                  <path d="M11 5.5c.8.8.8 2.2 0 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+                  <path d="M13 3.5c1.6 1.6 1.6 4.4 0 6" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+                </svg>
+              )}
+            </button>
+            <input
+              id="volume-slider"
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={volume}
+              onChange={handleVolumeChange}
+              aria-label="Volume"
+              className="w-20 h-1 accent-[#00ffc8] cursor-pointer"
+            />
+            <span className="text-xs text-white/70 font-mono w-10 text-right">
+              {Math.round(volume * 100)}%
+            </span>
+          </div>
         </div>
       </div>
     </div>

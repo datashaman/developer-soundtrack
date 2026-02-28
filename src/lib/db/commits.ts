@@ -1,5 +1,6 @@
 import type { Commit, MusicalParams } from "@/types";
-import { getDatabase } from "./index";
+import type { Row } from "@libsql/client";
+import { getDatabase, ensureSchema } from "./index";
 
 export interface CommitRow {
   id: string;
@@ -17,145 +18,149 @@ export interface CommitRow {
   created_at: string;
 }
 
-function rowToCommit(row: CommitRow): Commit {
+function rowToCommit(row: Row): Commit {
   return {
-    id: row.id,
-    repoId: row.repo_id,
-    timestamp: row.timestamp,
-    author: row.author,
-    message: row.message,
+    id: row.id as string,
+    repoId: row.repo_id as string,
+    timestamp: row.timestamp as string,
+    author: row.author as string,
+    message: row.message as string,
     stats: {
-      additions: row.additions,
-      deletions: row.deletions,
-      filesChanged: row.files_changed,
+      additions: row.additions as number,
+      deletions: row.deletions as number,
+      filesChanged: row.files_changed as number,
     },
-    primaryLanguage: row.primary_language,
-    languages: JSON.parse(row.languages) as Record<string, number>,
-    ciStatus: row.ci_status as Commit["ciStatus"],
-    musicalParams: JSON.parse(row.musical_params) as MusicalParams,
+    primaryLanguage: row.primary_language as string,
+    languages: JSON.parse(row.languages as string) as Record<string, number>,
+    ciStatus: (row.ci_status as string) as Commit["ciStatus"],
+    musicalParams: JSON.parse(row.musical_params as string) as MusicalParams,
   };
 }
 
-export function createCommit(commit: Commit): Commit {
+export async function createCommit(commit: Commit): Promise<Commit> {
+  await ensureSchema();
   const db = getDatabase();
-  const stmt = db.prepare(`
-    INSERT OR REPLACE INTO commits
+  await db.execute({
+    sql: `INSERT OR REPLACE INTO commits
       (id, repo_id, timestamp, author, message, additions, deletions,
        files_changed, primary_language, languages, ci_status, musical_params)
     VALUES
-      (@id, @repoId, @timestamp, @author, @message, @additions, @deletions,
-       @filesChanged, @primaryLanguage, @languages, @ciStatus, @musicalParams)
-  `);
-  stmt.run({
-    id: commit.id,
-    repoId: commit.repoId,
-    timestamp: commit.timestamp,
-    author: commit.author,
-    message: commit.message,
-    additions: commit.stats.additions,
-    deletions: commit.stats.deletions,
-    filesChanged: commit.stats.filesChanged,
-    primaryLanguage: commit.primaryLanguage,
-    languages: JSON.stringify(commit.languages),
-    ciStatus: commit.ciStatus,
-    musicalParams: JSON.stringify(commit.musicalParams),
+      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [
+      commit.id,
+      commit.repoId,
+      commit.timestamp,
+      commit.author,
+      commit.message,
+      commit.stats.additions,
+      commit.stats.deletions,
+      commit.stats.filesChanged,
+      commit.primaryLanguage,
+      JSON.stringify(commit.languages),
+      commit.ciStatus,
+      JSON.stringify(commit.musicalParams),
+    ],
   });
   return commit;
 }
 
-export function createCommits(commits: Commit[]): void {
+export async function createCommits(commits: Commit[]): Promise<void> {
+  await ensureSchema();
   const db = getDatabase();
-  const stmt = db.prepare(`
-    INSERT OR REPLACE INTO commits
-      (id, repo_id, timestamp, author, message, additions, deletions,
-       files_changed, primary_language, languages, ci_status, musical_params)
-    VALUES
-      (@id, @repoId, @timestamp, @author, @message, @additions, @deletions,
-       @filesChanged, @primaryLanguage, @languages, @ciStatus, @musicalParams)
-  `);
-  const insertMany = db.transaction((items: Commit[]) => {
-    for (const commit of items) {
-      stmt.run({
-        id: commit.id,
-        repoId: commit.repoId,
-        timestamp: commit.timestamp,
-        author: commit.author,
-        message: commit.message,
-        additions: commit.stats.additions,
-        deletions: commit.stats.deletions,
-        filesChanged: commit.stats.filesChanged,
-        primaryLanguage: commit.primaryLanguage,
-        languages: JSON.stringify(commit.languages),
-        ciStatus: commit.ciStatus,
-        musicalParams: JSON.stringify(commit.musicalParams),
-      });
-    }
+  await db.batch(
+    commits.map((commit) => ({
+      sql: `INSERT OR REPLACE INTO commits
+        (id, repo_id, timestamp, author, message, additions, deletions,
+         files_changed, primary_language, languages, ci_status, musical_params)
+      VALUES
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
+        commit.id,
+        commit.repoId,
+        commit.timestamp,
+        commit.author,
+        commit.message,
+        commit.stats.additions,
+        commit.stats.deletions,
+        commit.stats.filesChanged,
+        commit.primaryLanguage,
+        JSON.stringify(commit.languages),
+        commit.ciStatus,
+        JSON.stringify(commit.musicalParams),
+      ],
+    })),
+  );
+}
+
+export async function getCommitById(id: string): Promise<Commit | undefined> {
+  await ensureSchema();
+  const db = getDatabase();
+  const result = await db.execute({
+    sql: "SELECT * FROM commits WHERE id = ?",
+    args: [id],
   });
-  insertMany(commits);
+  return result.rows.length > 0 ? rowToCommit(result.rows[0]) : undefined;
 }
 
-export function getCommitById(id: string): Commit | undefined {
-  const db = getDatabase();
-  const row = db.prepare("SELECT * FROM commits WHERE id = ?").get(id) as
-    | CommitRow
-    | undefined;
-  return row ? rowToCommit(row) : undefined;
-}
-
-export function getCommitsByRepo(
+export async function getCommitsByRepo(
   repoId: string,
   options?: {
     from?: string;
     to?: string;
     page?: number;
     limit?: number;
-  }
-): { commits: Commit[]; total: number } {
+  },
+): Promise<{ commits: Commit[]; total: number }> {
+  await ensureSchema();
   const db = getDatabase();
-  const conditions: string[] = ["repo_id = @repoId"];
-  const values: Record<string, unknown> = { repoId };
+  const conditions: string[] = ["repo_id = ?"];
+  const values: (string | number)[] = [repoId];
 
   if (options?.from) {
-    conditions.push("timestamp >= @from");
-    values.from = options.from;
+    conditions.push("timestamp >= ?");
+    values.push(options.from);
   }
   if (options?.to) {
-    conditions.push("timestamp <= @to");
-    values.to = options.to;
+    conditions.push("timestamp <= ?");
+    values.push(options.to);
   }
 
   const where = conditions.join(" AND ");
 
-  const countRow = db
-    .prepare(`SELECT COUNT(*) as count FROM commits WHERE ${where}`)
-    .get(values) as { count: number };
-  const total = countRow.count;
+  const countResult = await db.execute({
+    sql: `SELECT COUNT(*) as count FROM commits WHERE ${where}`,
+    args: values,
+  });
+  const total = countResult.rows[0].count as number;
 
   const limit = options?.limit ?? 100;
   const page = options?.page ?? 1;
   const offset = (page - 1) * limit;
 
-  const rows = db
-    .prepare(
-      `SELECT * FROM commits WHERE ${where} ORDER BY timestamp ASC LIMIT @limit OFFSET @offset`
-    )
-    .all({ ...values, limit, offset }) as CommitRow[];
+  const result = await db.execute({
+    sql: `SELECT * FROM commits WHERE ${where} ORDER BY timestamp ASC LIMIT ? OFFSET ?`,
+    args: [...values, limit, offset],
+  });
 
-  return { commits: rows.map(rowToCommit), total };
+  return { commits: result.rows.map(rowToCommit), total };
 }
 
-export function getCommitsByAuthor(author: string): Commit[] {
+export async function getCommitsByAuthor(author: string): Promise<Commit[]> {
+  await ensureSchema();
   const db = getDatabase();
-  const rows = db
-    .prepare("SELECT * FROM commits WHERE author = ? ORDER BY timestamp ASC")
-    .all(author) as CommitRow[];
-  return rows.map(rowToCommit);
+  const result = await db.execute({
+    sql: "SELECT * FROM commits WHERE author = ? ORDER BY timestamp ASC",
+    args: [author],
+  });
+  return result.rows.map(rowToCommit);
 }
 
-export function deleteCommitsByRepo(repoId: string): number {
+export async function deleteCommitsByRepo(repoId: string): Promise<number> {
+  await ensureSchema();
   const db = getDatabase();
-  const result = db
-    .prepare("DELETE FROM commits WHERE repo_id = ?")
-    .run(repoId);
-  return result.changes;
+  const result = await db.execute({
+    sql: "DELETE FROM commits WHERE repo_id = ?",
+    args: [repoId],
+  });
+  return result.rowsAffected ?? 0;
 }

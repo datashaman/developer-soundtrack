@@ -167,7 +167,7 @@ export function Dashboard() {
           <button
             onClick={handlePlay}
             disabled={!selectedRepo}
-            className="w-full rounded-lg bg-[#00ffc8] hover:bg-[#00ddb0] disabled:bg-white/10 disabled:text-white/30 text-black font-semibold py-3 text-sm transition-colors disabled:cursor-not-allowed"
+            className="w-full rounded-lg bg-[#00ffc8] hover:bg-[#00ddb0] disabled:bg-white/10 disabled:text-white/30 text-black font-semibold py-3 min-h-11 text-sm transition-colors disabled:cursor-not-allowed"
           >
             {selectedRepo ? "Play Soundtrack" : "Select a repository to begin"}
           </button>
@@ -184,7 +184,7 @@ export function Dashboard() {
                 <button
                   key={`${session.repo}-${session.playedAt}-${index}`}
                   onClick={() => handleRecentClick(session)}
-                  className="w-full text-left rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] px-4 py-3 transition-colors group"
+                  className="w-full text-left rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] px-4 py-3 min-h-11 transition-colors group"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-mono text-white/80 group-hover:text-[#00ffc8] transition-colors">

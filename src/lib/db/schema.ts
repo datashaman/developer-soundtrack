@@ -1,7 +1,7 @@
-import type Database from "better-sqlite3";
+import type { Client } from "@libsql/client";
 
-export function initializeSchema(db: Database.Database): void {
-  db.exec(`
+export async function initializeSchema(client: Client): Promise<void> {
+  await client.executeMultiple(`
     CREATE TABLE IF NOT EXISTS repos (
       id TEXT PRIMARY KEY,
       full_name TEXT NOT NULL UNIQUE,

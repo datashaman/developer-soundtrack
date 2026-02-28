@@ -57,8 +57,8 @@ export interface CachedCommitsResult {
 }
 
 /**
- * Get commits with caching. Checks SQLite first; on cache miss or stale data,
- * fetches from GitHub, stores in SQLite, then returns.
+ * Get commits with caching. Checks the database first; on cache miss or stale data,
+ * fetches from GitHub, stores in the database, then returns.
  */
 export async function getCachedCommits(
   octokit: Octokit,
@@ -67,11 +67,11 @@ export async function getCachedCommits(
   const { repo, from, to, page = 1, limit = 100 } = options;
   const [owner, repoName] = repo.split("/");
 
-  const repoRow = getRepoByFullName(repo);
+  const repoRow = await getRepoByFullName(repo);
 
   if (repoRow && !isCacheStale(repoRow.last_fetched_at, to)) {
-    // Cache hit — return from SQLite
-    const { commits, total } = getCommitsByRepo(repoRow.id, {
+    // Cache hit — return from database
+    const { commits, total } = await getCommitsByRepo(repoRow.id, {
       from,
       to,
       page,
@@ -106,25 +106,25 @@ export async function getCachedCommits(
   if (repoRow) {
     repoId = repoRow.id;
   } else {
-    const created = createRepo({
+    const created = await createRepo({
       id: repo,
       fullName: repo,
     });
     repoId = created.id;
   }
 
-  // Store commits in SQLite
+  // Store commits in database
   if (allCommits.length > 0) {
-    createCommits(allCommits);
+    await createCommits(allCommits);
   }
 
   // Update last_fetched_at
-  updateRepo(repoId, {
+  await updateRepo(repoId, {
     lastFetchedAt: new Date().toISOString(),
   });
 
   // Return the requested page from the fresh data
-  const { commits, total } = getCommitsByRepo(repoId, {
+  const { commits, total } = await getCommitsByRepo(repoId, {
     from,
     to,
     page,

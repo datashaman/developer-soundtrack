@@ -1,18 +1,19 @@
-import Database from "better-sqlite3";
+import { createClient, type Client } from "@libsql/client";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { initializeSchema } from "./schema";
 import type { Commit, UserSettings } from "@/types";
 
-// We test against a real in-memory SQLite database instead of mocking.
+// We test against a real in-memory libsql database instead of mocking.
 // Each test gets a fresh database to ensure isolation.
 
-let db: Database.Database;
+let client: Client;
 
-// Mock getDatabase to return our test database
+// Mock getDatabase to return our test client
 vi.mock("./index", () => ({
-  getDatabase: () => db,
+  getDatabase: () => client,
+  ensureSchema: () => Promise.resolve(),
   closeDatabase: () => {
-    if (db) db.close();
+    if (client) client.close();
   },
 }));
 
@@ -60,70 +61,63 @@ function makeCommit(overrides: Partial<Commit> = {}): Commit {
   };
 }
 
-beforeEach(() => {
-  db = new Database(":memory:");
-  db.pragma("foreign_keys = ON");
-  initializeSchema(db);
+beforeEach(async () => {
+  client = createClient({ url: ":memory:" });
+  await initializeSchema(client);
 });
 
 afterEach(() => {
-  db.close();
+  client.close();
 });
 
 // --- Schema Tests ---
 
 describe("schema", () => {
-  it("creates repos table", () => {
-    const tables = db
-      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='repos'")
-      .all();
-    expect(tables).toHaveLength(1);
+  it("creates repos table", async () => {
+    const result = await client.execute(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='repos'",
+    );
+    expect(result.rows).toHaveLength(1);
   });
 
-  it("creates commits table", () => {
-    const tables = db
-      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='commits'")
-      .all();
-    expect(tables).toHaveLength(1);
+  it("creates commits table", async () => {
+    const result = await client.execute(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='commits'",
+    );
+    expect(result.rows).toHaveLength(1);
   });
 
-  it("creates user_settings table", () => {
-    const tables = db
-      .prepare(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='user_settings'"
-      )
-      .all();
-    expect(tables).toHaveLength(1);
+  it("creates user_settings table", async () => {
+    const result = await client.execute(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='user_settings'",
+    );
+    expect(result.rows).toHaveLength(1);
   });
 
-  it("creates idx_commits_repo_time index", () => {
-    const indexes = db
-      .prepare(
-        "SELECT name FROM sqlite_master WHERE type='index' AND name='idx_commits_repo_time'"
-      )
-      .all();
-    expect(indexes).toHaveLength(1);
+  it("creates idx_commits_repo_time index", async () => {
+    const result = await client.execute(
+      "SELECT name FROM sqlite_master WHERE type='index' AND name='idx_commits_repo_time'",
+    );
+    expect(result.rows).toHaveLength(1);
   });
 
-  it("creates idx_commits_author index", () => {
-    const indexes = db
-      .prepare(
-        "SELECT name FROM sqlite_master WHERE type='index' AND name='idx_commits_author'"
-      )
-      .all();
-    expect(indexes).toHaveLength(1);
+  it("creates idx_commits_author index", async () => {
+    const result = await client.execute(
+      "SELECT name FROM sqlite_master WHERE type='index' AND name='idx_commits_author'",
+    );
+    expect(result.rows).toHaveLength(1);
   });
 
-  it("is idempotent — running initializeSchema twice does not error", () => {
-    expect(() => initializeSchema(db)).not.toThrow();
+  it("is idempotent — running initializeSchema twice does not error", async () => {
+    await expect(initializeSchema(client)).resolves.not.toThrow();
   });
 });
 
 // --- Repos CRUD Tests ---
 
 describe("repos", () => {
-  it("creates a repo", () => {
-    const repo = createRepo({
+  it("creates a repo", async () => {
+    const repo = await createRepo({
       id: "repo-1",
       fullName: "alice/my-project",
       description: "A test project",
@@ -137,34 +131,34 @@ describe("repos", () => {
     expect(repo.webhook_id).toBeNull();
   });
 
-  it("gets repo by ID", () => {
-    createRepo({ id: "repo-1", fullName: "alice/my-project" });
-    const repo = getRepoById("repo-1");
+  it("gets repo by ID", async () => {
+    await createRepo({ id: "repo-1", fullName: "alice/my-project" });
+    const repo = await getRepoById("repo-1");
     expect(repo).toBeDefined();
     expect(repo!.full_name).toBe("alice/my-project");
   });
 
-  it("returns undefined for nonexistent repo", () => {
-    expect(getRepoById("nonexistent")).toBeUndefined();
+  it("returns undefined for nonexistent repo", async () => {
+    expect(await getRepoById("nonexistent")).toBeUndefined();
   });
 
-  it("gets repo by full name", () => {
-    createRepo({ id: "repo-1", fullName: "alice/my-project" });
-    const repo = getRepoByFullName("alice/my-project");
+  it("gets repo by full name", async () => {
+    await createRepo({ id: "repo-1", fullName: "alice/my-project" });
+    const repo = await getRepoByFullName("alice/my-project");
     expect(repo).toBeDefined();
     expect(repo!.id).toBe("repo-1");
   });
 
-  it("gets all repos", () => {
-    createRepo({ id: "repo-1", fullName: "alice/project-a" });
-    createRepo({ id: "repo-2", fullName: "alice/project-b" });
-    const repos = getAllRepos();
+  it("gets all repos", async () => {
+    await createRepo({ id: "repo-1", fullName: "alice/project-a" });
+    await createRepo({ id: "repo-2", fullName: "alice/project-b" });
+    const repos = await getAllRepos();
     expect(repos).toHaveLength(2);
   });
 
-  it("updates a repo", () => {
-    createRepo({ id: "repo-1", fullName: "alice/my-project" });
-    const updated = updateRepo("repo-1", {
+  it("updates a repo", async () => {
+    await createRepo({ id: "repo-1", fullName: "alice/my-project" });
+    const updated = await updateRepo("repo-1", {
       description: "Updated desc",
       webhookId: "wh-123",
       lastFetchedAt: "2025-03-10T12:00:00Z",
@@ -174,46 +168,46 @@ describe("repos", () => {
     expect(updated!.last_fetched_at).toBe("2025-03-10T12:00:00Z");
   });
 
-  it("update with no fields returns existing repo", () => {
-    createRepo({ id: "repo-1", fullName: "alice/my-project" });
-    const repo = updateRepo("repo-1", {});
+  it("update with no fields returns existing repo", async () => {
+    await createRepo({ id: "repo-1", fullName: "alice/my-project" });
+    const repo = await updateRepo("repo-1", {});
     expect(repo!.id).toBe("repo-1");
   });
 
-  it("deletes a repo", () => {
-    createRepo({ id: "repo-1", fullName: "alice/my-project" });
-    expect(deleteRepo("repo-1")).toBe(true);
-    expect(getRepoById("repo-1")).toBeUndefined();
+  it("deletes a repo", async () => {
+    await createRepo({ id: "repo-1", fullName: "alice/my-project" });
+    expect(await deleteRepo("repo-1")).toBe(true);
+    expect(await getRepoById("repo-1")).toBeUndefined();
   });
 
-  it("delete returns false for nonexistent repo", () => {
-    expect(deleteRepo("nonexistent")).toBe(false);
+  it("delete returns false for nonexistent repo", async () => {
+    expect(await deleteRepo("nonexistent")).toBe(false);
   });
 
-  it("enforces unique full_name", () => {
-    createRepo({ id: "repo-1", fullName: "alice/my-project" });
-    expect(() =>
-      createRepo({ id: "repo-2", fullName: "alice/my-project" })
-    ).toThrow();
+  it("enforces unique full_name", async () => {
+    await createRepo({ id: "repo-1", fullName: "alice/my-project" });
+    await expect(
+      createRepo({ id: "repo-2", fullName: "alice/my-project" }),
+    ).rejects.toThrow();
   });
 });
 
 // --- Commits CRUD Tests ---
 
 describe("commits", () => {
-  beforeEach(() => {
-    createRepo({ id: "repo-1", fullName: "alice/my-project" });
+  beforeEach(async () => {
+    await createRepo({ id: "repo-1", fullName: "alice/my-project" });
   });
 
-  it("creates a commit", () => {
+  it("creates a commit", async () => {
     const commit = makeCommit();
-    const result = createCommit(commit);
+    const result = await createCommit(commit);
     expect(result.id).toBe("abc123");
   });
 
-  it("gets commit by ID", () => {
-    createCommit(makeCommit());
-    const commit = getCommitById("abc123");
+  it("gets commit by ID", async () => {
+    await createCommit(makeCommit());
+    const commit = await getCommitById("abc123");
     expect(commit).toBeDefined();
     expect(commit!.author).toBe("alice");
     expect(commit!.stats.additions).toBe(50);
@@ -221,49 +215,49 @@ describe("commits", () => {
     expect(commit!.musicalParams.instrument).toBe("FMSynth");
   });
 
-  it("returns undefined for nonexistent commit", () => {
-    expect(getCommitById("nonexistent")).toBeUndefined();
+  it("returns undefined for nonexistent commit", async () => {
+    expect(await getCommitById("nonexistent")).toBeUndefined();
   });
 
-  it("creates multiple commits in a transaction", () => {
+  it("creates multiple commits in a batch", async () => {
     const commits = [
       makeCommit({ id: "c1", timestamp: "2025-03-10T10:00:00Z" }),
       makeCommit({ id: "c2", timestamp: "2025-03-10T11:00:00Z" }),
       makeCommit({ id: "c3", timestamp: "2025-03-10T12:00:00Z" }),
     ];
-    createCommits(commits);
-    const { total } = getCommitsByRepo("repo-1");
+    await createCommits(commits);
+    const { total } = await getCommitsByRepo("repo-1");
     expect(total).toBe(3);
   });
 
-  it("gets commits by repo with pagination", () => {
+  it("gets commits by repo with pagination", async () => {
     const commits = Array.from({ length: 5 }, (_, i) =>
       makeCommit({
         id: `c${i}`,
         timestamp: `2025-03-10T1${i}:00:00Z`,
-      })
+      }),
     );
-    createCommits(commits);
+    await createCommits(commits);
 
-    const page1 = getCommitsByRepo("repo-1", { page: 1, limit: 2 });
+    const page1 = await getCommitsByRepo("repo-1", { page: 1, limit: 2 });
     expect(page1.commits).toHaveLength(2);
     expect(page1.total).toBe(5);
 
-    const page2 = getCommitsByRepo("repo-1", { page: 2, limit: 2 });
+    const page2 = await getCommitsByRepo("repo-1", { page: 2, limit: 2 });
     expect(page2.commits).toHaveLength(2);
 
-    const page3 = getCommitsByRepo("repo-1", { page: 3, limit: 2 });
+    const page3 = await getCommitsByRepo("repo-1", { page: 3, limit: 2 });
     expect(page3.commits).toHaveLength(1);
   });
 
-  it("filters commits by date range", () => {
-    createCommits([
+  it("filters commits by date range", async () => {
+    await createCommits([
       makeCommit({ id: "c1", timestamp: "2025-03-09T10:00:00Z" }),
       makeCommit({ id: "c2", timestamp: "2025-03-10T10:00:00Z" }),
       makeCommit({ id: "c3", timestamp: "2025-03-11T10:00:00Z" }),
     ]);
 
-    const { commits, total } = getCommitsByRepo("repo-1", {
+    const { commits, total } = await getCommitsByRepo("repo-1", {
       from: "2025-03-10T00:00:00Z",
       to: "2025-03-10T23:59:59Z",
     });
@@ -272,49 +266,49 @@ describe("commits", () => {
     expect(commits[0].id).toBe("c2");
   });
 
-  it("gets commits by author", () => {
-    createCommits([
+  it("gets commits by author", async () => {
+    await createCommits([
       makeCommit({ id: "c1", author: "alice" }),
       makeCommit({ id: "c2", author: "bob" }),
       makeCommit({ id: "c3", author: "alice" }),
     ]);
 
-    const aliceCommits = getCommitsByAuthor("alice");
+    const aliceCommits = await getCommitsByAuthor("alice");
     expect(aliceCommits).toHaveLength(2);
   });
 
-  it("upserts commits (INSERT OR REPLACE)", () => {
-    createCommit(makeCommit({ id: "c1", message: "original" }));
-    createCommit(makeCommit({ id: "c1", message: "updated" }));
+  it("upserts commits (INSERT OR REPLACE)", async () => {
+    await createCommit(makeCommit({ id: "c1", message: "original" }));
+    await createCommit(makeCommit({ id: "c1", message: "updated" }));
 
-    const commit = getCommitById("c1");
+    const commit = await getCommitById("c1");
     expect(commit!.message).toBe("updated");
   });
 
-  it("deletes commits by repo", () => {
-    createCommits([
+  it("deletes commits by repo", async () => {
+    await createCommits([
       makeCommit({ id: "c1" }),
       makeCommit({ id: "c2" }),
     ]);
-    const deleted = deleteCommitsByRepo("repo-1");
+    const deleted = await deleteCommitsByRepo("repo-1");
     expect(deleted).toBe(2);
-    expect(getCommitsByRepo("repo-1").total).toBe(0);
+    expect((await getCommitsByRepo("repo-1")).total).toBe(0);
   });
 
-  it("cascades delete when repo is deleted", () => {
-    createCommit(makeCommit());
-    deleteRepo("repo-1");
-    expect(getCommitById("abc123")).toBeUndefined();
+  it("cascades delete when repo is deleted", async () => {
+    await createCommit(makeCommit());
+    await deleteRepo("repo-1");
+    expect(await getCommitById("abc123")).toBeUndefined();
   });
 
-  it("returns commits ordered by timestamp", () => {
-    createCommits([
+  it("returns commits ordered by timestamp", async () => {
+    await createCommits([
       makeCommit({ id: "c2", timestamp: "2025-03-10T12:00:00Z" }),
       makeCommit({ id: "c1", timestamp: "2025-03-10T10:00:00Z" }),
       makeCommit({ id: "c3", timestamp: "2025-03-10T14:00:00Z" }),
     ]);
 
-    const { commits } = getCommitsByRepo("repo-1");
+    const { commits } = await getCommitsByRepo("repo-1");
     expect(commits.map((c) => c.id)).toEqual(["c1", "c2", "c3"]);
   });
 });
@@ -322,8 +316,8 @@ describe("commits", () => {
 // --- Settings CRUD Tests ---
 
 describe("settings", () => {
-  it("returns defaults for new user", () => {
-    const settings = getSettings("user-1");
+  it("returns defaults for new user", async () => {
+    const settings = await getSettings("user-1");
     expect(settings.userId).toBe("user-1");
     expect(settings.defaultTempo).toBe(1.0);
     expect(settings.volume).toBe(0.8);
@@ -333,7 +327,7 @@ describe("settings", () => {
     expect(settings.authorMotifs).toEqual([]);
   });
 
-  it("saves and retrieves settings", () => {
+  it("saves and retrieves settings", async () => {
     const input: UserSettings = {
       userId: "user-1",
       defaultTempo: 2.0,
@@ -346,9 +340,9 @@ describe("settings", () => {
       ],
       volume: 0.6,
     };
-    saveSettings(input);
+    await saveSettings(input);
 
-    const settings = getSettings("user-1");
+    const settings = await getSettings("user-1");
     expect(settings.defaultTempo).toBe(2.0);
     expect(settings.defaultRepo).toBe("alice/my-project");
     expect(settings.theme).toBe("light");
@@ -359,8 +353,8 @@ describe("settings", () => {
     expect(settings.volume).toBe(0.6);
   });
 
-  it("upserts settings on save", () => {
-    saveSettings({
+  it("upserts settings on save", async () => {
+    await saveSettings({
       userId: "user-1",
       defaultTempo: 1.0,
       defaultRepo: "",
@@ -370,7 +364,7 @@ describe("settings", () => {
       authorMotifs: [],
       volume: 0.8,
     });
-    saveSettings({
+    await saveSettings({
       userId: "user-1",
       defaultTempo: 3.0,
       defaultRepo: "bob/repo",
@@ -381,14 +375,14 @@ describe("settings", () => {
       volume: 0.5,
     });
 
-    const settings = getSettings("user-1");
+    const settings = await getSettings("user-1");
     expect(settings.defaultTempo).toBe(3.0);
     expect(settings.defaultRepo).toBe("bob/repo");
     expect(settings.volume).toBe(0.5);
   });
 
-  it("deletes settings", () => {
-    saveSettings({
+  it("deletes settings", async () => {
+    await saveSettings({
       userId: "user-1",
       defaultTempo: 1.0,
       defaultRepo: "",
@@ -398,14 +392,14 @@ describe("settings", () => {
       authorMotifs: [],
       volume: 0.8,
     });
-    expect(deleteSettings("user-1")).toBe(true);
+    expect(await deleteSettings("user-1")).toBe(true);
 
     // Should return defaults after deletion
-    const settings = getSettings("user-1");
+    const settings = await getSettings("user-1");
     expect(settings.defaultTempo).toBe(1.0);
   });
 
-  it("delete returns false for nonexistent user", () => {
-    expect(deleteSettings("nonexistent")).toBe(false);
+  it("delete returns false for nonexistent user", async () => {
+    expect(await deleteSettings("nonexistent")).toBe(false);
   });
 });

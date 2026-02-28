@@ -72,7 +72,7 @@ export function RepoSelector({ value, onChange }: RepoSelectorProps) {
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value || null)}
         disabled={isLoading}
-        className="w-full rounded-lg bg-white/5 border border-white/10 text-white px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#00ffc8]/50 focus:ring-1 focus:ring-[#00ffc8]/30 disabled:opacity-50 disabled:cursor-wait appearance-none"
+        className="w-full rounded-lg bg-white/5 border border-white/10 text-white px-4 py-3 min-h-11 text-sm font-mono focus:outline-none focus:border-[#00ffc8]/50 focus:ring-1 focus:ring-[#00ffc8]/30 disabled:opacity-50 disabled:cursor-wait appearance-none"
       >
         <option value="" className="bg-[#0a0a0e]">
           {isLoading ? "Loading repositories…" : "Select a repository"}

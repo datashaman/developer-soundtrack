@@ -76,7 +76,7 @@ describe("GET /api/settings", () => {
       authorMotifs: [],
       volume: 0.8,
     };
-    mockedGetSettings.mockReturnValue(defaultSettings);
+    mockedGetSettings.mockResolvedValue(defaultSettings);
 
     const response = await GET();
     expect(response.status).toBe(200);
@@ -97,7 +97,7 @@ describe("GET /api/settings", () => {
       authorMotifs: [],
       volume: 0.5,
     };
-    mockedGetSettings.mockReturnValue(savedSettings);
+    mockedGetSettings.mockResolvedValue(savedSettings);
 
     const response = await GET();
     expect(response.status).toBe(200);
@@ -107,9 +107,7 @@ describe("GET /api/settings", () => {
 
   it("handles database errors gracefully", async () => {
     mockedAuth.mockResolvedValue(makeSession());
-    mockedGetSettings.mockImplementation(() => {
-      throw new Error("Database error");
-    });
+    mockedGetSettings.mockRejectedValue(new Error("Database error"));
 
     const response = await GET();
     expect(response.status).toBe(500);
@@ -187,7 +185,7 @@ describe("PUT /api/settings", () => {
       authorMotifs: [],
       volume: 0.8,
     };
-    mockedGetSettings.mockReturnValue(currentSettings);
+    mockedGetSettings.mockResolvedValue(currentSettings);
 
     const inputSettings = {
       defaultTempo: 2.5,
@@ -199,7 +197,7 @@ describe("PUT /api/settings", () => {
       volume: 0.6,
     };
     const savedSettings = { userId: "test@example.com", ...inputSettings };
-    mockedSaveSettings.mockReturnValue(savedSettings);
+    mockedSaveSettings.mockResolvedValue(savedSettings);
 
     const request = makePutRequest(inputSettings);
     const response = await PUT(request);
@@ -221,8 +219,8 @@ describe("PUT /api/settings", () => {
       authorMotifs: [],
       volume: 0.8,
     };
-    mockedGetSettings.mockReturnValue(currentSettings);
-    mockedSaveSettings.mockReturnValue({ ...currentSettings, theme: "light" });
+    mockedGetSettings.mockResolvedValue(currentSettings);
+    mockedSaveSettings.mockResolvedValue({ ...currentSettings, theme: "light" });
 
     const request = makePutRequest({ theme: "light" });
     const response = await PUT(request);
@@ -246,8 +244,8 @@ describe("PUT /api/settings", () => {
       authorMotifs: [],
       volume: 0.8,
     };
-    mockedGetSettings.mockReturnValue(currentSettings);
-    mockedSaveSettings.mockReturnValue(currentSettings);
+    mockedGetSettings.mockResolvedValue(currentSettings);
+    mockedSaveSettings.mockResolvedValue(currentSettings);
 
     const request = makePutRequest({ userId: "hacker@evil.com", volume: 0.5 });
     const response = await PUT(request);
@@ -260,7 +258,7 @@ describe("PUT /api/settings", () => {
 
   it("handles database errors gracefully", async () => {
     mockedAuth.mockResolvedValue(makeSession());
-    mockedGetSettings.mockReturnValue({
+    mockedGetSettings.mockResolvedValue({
       userId: "test@example.com",
       defaultTempo: 1.0,
       defaultRepo: "",
@@ -270,9 +268,7 @@ describe("PUT /api/settings", () => {
       authorMotifs: [],
       volume: 0.8,
     });
-    mockedSaveSettings.mockImplementation(() => {
-      throw new Error("Database write error");
-    });
+    mockedSaveSettings.mockRejectedValue(new Error("Database write error"));
 
     const request = makePutRequest({ theme: "light" });
     const response = await PUT(request);
@@ -283,7 +279,7 @@ describe("PUT /api/settings", () => {
 
   it("handles non-Error exceptions", async () => {
     mockedAuth.mockResolvedValue(makeSession());
-    mockedGetSettings.mockReturnValue({
+    mockedGetSettings.mockResolvedValue({
       userId: "test@example.com",
       defaultTempo: 1.0,
       defaultRepo: "",
@@ -293,9 +289,7 @@ describe("PUT /api/settings", () => {
       authorMotifs: [],
       volume: 0.8,
     });
-    mockedSaveSettings.mockImplementation(() => {
-      throw "string error";
-    });
+    mockedSaveSettings.mockRejectedValue("string error");
 
     const request = makePutRequest({ theme: "light" });
     const response = await PUT(request);

@@ -7,18 +7,18 @@ export function LandingPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0e] text-white">
       {/* Hero Section */}
-      <header className="mx-auto max-w-4xl px-4 pt-16 pb-12 text-center">
-        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight font-[family-name:var(--font-space-grotesk)] mb-4">
+      <header className="mx-auto max-w-4xl px-4 pt-10 pb-8 md:pt-16 md:pb-12 text-center">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight font-[family-name:var(--font-space-grotesk)] mb-4">
           <span className="text-[#00ffc8]">Developer</span> Soundtrack
         </h1>
-        <p className="text-lg sm:text-xl text-white/60 max-w-2xl mx-auto leading-relaxed font-[family-name:var(--font-space-grotesk)]">
+        <p className="text-base sm:text-lg md:text-xl text-white/60 max-w-2xl mx-auto leading-relaxed font-[family-name:var(--font-space-grotesk)]">
           Transform your commit history into generative, listenable music.
           Every commit becomes a note — shaped by language, diff size, CI status,
           and author.
         </p>
         <button
           onClick={() => signIn("github")}
-          className="mt-8 inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-[#00ffc8] hover:bg-[#00ddb0] text-black font-semibold text-sm transition-colors font-[family-name:var(--font-space-grotesk)]"
+          className="mt-6 md:mt-8 inline-flex items-center gap-2 px-6 py-3 min-h-11 rounded-lg bg-[#00ffc8] hover:bg-[#00ddb0] text-black font-semibold text-sm transition-colors font-[family-name:var(--font-space-grotesk)]"
         >
           <svg
             className="h-5 w-5"

@@ -1,27 +1,31 @@
-import Database from "better-sqlite3";
-import path from "path";
+import { createClient, type Client } from "@libsql/client";
 import { initializeSchema } from "./schema";
 
-let db: Database.Database | null = null;
+let client: Client | null = null;
+let schemaReady: Promise<void> | null = null;
 
-export function getDatabase(): Database.Database {
-  if (db) return db;
+export function getDatabase(): Client {
+  if (client) return client;
 
-  const dbPath =
-    process.env.DATABASE_PATH || path.join(process.cwd(), "data", "soundtrack.db");
+  const url = process.env.TURSO_DATABASE_URL || "file:./data/soundtrack.db";
+  const authToken = process.env.TURSO_AUTH_TOKEN || undefined;
 
-  db = new Database(dbPath);
-  db.pragma("journal_mode = WAL");
-  db.pragma("foreign_keys = ON");
+  client = createClient({ url, authToken });
+  return client;
+}
 
-  initializeSchema(db);
-
-  return db;
+export async function ensureSchema(): Promise<void> {
+  const db = getDatabase();
+  if (!schemaReady) {
+    schemaReady = initializeSchema(db);
+  }
+  await schemaReady;
 }
 
 export function closeDatabase(): void {
-  if (db) {
-    db.close();
-    db = null;
+  if (client) {
+    client.close();
+    client = null;
+    schemaReady = null;
   }
 }
