@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { InstrumentMapper } from "@/components/settings/InstrumentMapper";
+import { LanguageToggle } from "@/components/settings/LanguageToggle";
 import { useTheme } from "@/hooks/useTheme";
 import type { UserSettings } from "@/types";
 
@@ -23,6 +24,7 @@ export default function SettingsPage() {
   const [volume, setVolume] = useState(80);
   const [defaultRepo, setDefaultRepo] = useState("");
   const [instrumentOverrides, setInstrumentOverrides] = useState<Record<string, string>>({});
+  const [enabledLanguages, setEnabledLanguages] = useState<string[]>([]);
   const [repos, setRepos] = useState<Repo[]>([]);
   const [reposLoading, setReposLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
@@ -44,6 +46,7 @@ export default function SettingsPage() {
         setVolume(Math.round(settings.volume * 100));
         setDefaultRepo(settings.defaultRepo);
         setInstrumentOverrides(settings.instrumentOverrides ?? {});
+        setEnabledLanguages(settings.enabledLanguages ?? []);
       } catch {
         // Settings will use defaults
       } finally {
@@ -90,6 +93,7 @@ export default function SettingsPage() {
           defaultRepo,
           theme,
           instrumentOverrides,
+          enabledLanguages,
         }),
       });
 
@@ -104,7 +108,7 @@ export default function SettingsPage() {
       setSaveStatus("error");
       setSaveError(err instanceof Error ? err.message : "Failed to save settings");
     }
-  }, [tempo, volume, defaultRepo, theme, instrumentOverrides]);
+  }, [tempo, volume, defaultRepo, theme, instrumentOverrides, enabledLanguages]);
 
   if (isLoading) {
     return (
@@ -214,6 +218,14 @@ export default function SettingsPage() {
           <InstrumentMapper
             overrides={instrumentOverrides}
             onChange={setInstrumentOverrides}
+          />
+        </div>
+
+        {/* Language Toggles Section */}
+        <div className="rounded-xl border border-border-strong bg-surface p-6">
+          <LanguageToggle
+            enabledLanguages={enabledLanguages}
+            onChange={setEnabledLanguages}
           />
         </div>
 

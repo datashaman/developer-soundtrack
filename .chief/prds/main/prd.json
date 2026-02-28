@@ -658,7 +658,8 @@
         "Saved as enabledLanguages in user settings"
       ],
       "priority": 41,
-      "passes": false
+      "inProgress": false,
+      "passes": true
     },
     {
       "id": "US-042",

@@ -55,8 +55,28 @@ export default function PlayerPage() {
     seekTo,
     setTempo,
     setVolume,
+    setEnabledLanguages,
     getWaveformData,
   } = useMusicEngine();
+
+  // Load enabled languages from user settings
+  useEffect(() => {
+    let cancelled = false;
+    async function loadSettings() {
+      try {
+        const response = await fetch("/api/settings");
+        if (!response.ok || cancelled) return;
+        const data = await response.json();
+        if (!cancelled) {
+          setEnabledLanguages(data.settings?.enabledLanguages ?? []);
+        }
+      } catch {
+        // Use defaults (all enabled)
+      }
+    }
+    loadSettings();
+    return () => { cancelled = true; };
+  }, [setEnabledLanguages]);
 
   const hasStartedRef = useRef(false);
   const commitsRef = useRef<Commit[]>([]);

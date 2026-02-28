@@ -28,6 +28,8 @@ interface UseMusicEngineReturn {
   setTempo: (secondsBetweenNotes: number) => void;
   /** Set master volume (0-1) */
   setVolume: (level: number) => void;
+  /** Set enabled languages — empty array means all enabled */
+  setEnabledLanguages: (languages: string[]) => void;
 
   /** Get current waveform data for visualization */
   getWaveformData: () => Float32Array;
@@ -140,6 +142,13 @@ export function useMusicEngine(): UseMusicEngineReturn {
     [getEngine]
   );
 
+  const setEnabledLanguages = useCallback(
+    (languages: string[]) => {
+      getEngine().setEnabledLanguages(languages);
+    },
+    [getEngine]
+  );
+
   const getWaveformData = useCallback(() => {
     return getEngine().getWaveformData();
   }, [getEngine]);
@@ -160,6 +169,7 @@ export function useMusicEngine(): UseMusicEngineReturn {
     seekTo,
     setTempo,
     setVolume,
+    setEnabledLanguages,
     getWaveformData,
     getFFTData,
   };

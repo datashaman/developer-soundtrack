@@ -156,6 +156,9 @@ export class MusicEngine {
   private _tempo = 1.0; // seconds between notes
   private _playbackTimer: ReturnType<typeof setTimeout> | null = null;
 
+  /** Enabled languages — empty array means all enabled (default) */
+  private _enabledLanguages: string[] = [];
+
   // Callbacks
   onNotePlay: NotePlayCallback | null = null;
   onPlaybackComplete: PlaybackCompleteCallback | null = null;
@@ -458,6 +461,20 @@ export class MusicEngine {
     this._tempo = Math.min(Math.max(secondsBetweenNotes, 0.3), 5.0);
   }
 
+  /**
+   * Set the list of enabled languages. Empty array means all enabled (default).
+   * Disabled languages are skipped during sequential playback.
+   */
+  setEnabledLanguages(languages: string[]): void {
+    this._enabledLanguages = languages;
+  }
+
+  /** Check if a language is enabled for playback */
+  private isLanguageEnabled(language: string): boolean {
+    if (this._enabledLanguages.length === 0) return true;
+    return this._enabledLanguages.includes(language);
+  }
+
   /** Current playback state accessors */
   get playing(): boolean {
     return this._playing;
@@ -493,6 +510,15 @@ export class MusicEngine {
 
   private scheduleNext(): void {
     if (!this._playing || this._paused) return;
+
+    // Skip commits whose language is disabled
+    while (
+      this._currentIndex < this._commits.length &&
+      !this.isLanguageEnabled(this._commits[this._currentIndex].primaryLanguage)
+    ) {
+      this._currentIndex++;
+    }
+
     if (this._currentIndex >= this._commits.length) {
       this._playing = false;
       this._paused = false;
