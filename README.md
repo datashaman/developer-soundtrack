@@ -4,7 +4,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-Transform your GitHub commits into generative music.
+Transform your GitHub commits into generative music. Listen live as you push.
 
 First, run the development server:
 
